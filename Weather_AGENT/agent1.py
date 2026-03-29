@@ -87,11 +87,16 @@ SYSTEM_PROMPT = """
 
 print("\n\n\n")
 
+class MyOutputFormat(BaseModel):
+    step: str = Field(..., description= "The ID of the step. Example: PLAN, OUTPUT, TOOL, etc ")
+    content: Optional[str] = Field(None, description = "The optional string content for the step")
+    tool: Optional[str] = Field(None, description = "The ID of the tool to call.")
+    input: Optional[str] = Field(None, description = "The input params for the tool")
+
 
 message_history = [
     {"role": "system", "content": SYSTEM_PROMPT},
 ]
-
 
 
 while True:
@@ -101,9 +106,9 @@ while True:
 
     while True:
         try:
-            response = client.chat.completions.create(
+            response = client.chat.completions.parse(
                 model = "gpt-4o",
-                response_format= {"type": "json_object"},
+                response_format= MyOutputFormat,
                 messages= message_history
             )
 
@@ -119,17 +124,18 @@ while True:
         
 
 
-        parsed_result = json.loads(raw_result)
+        parsed_result = response.choices[0].message.parsed
+    
         
 
 
-        if parsed_result.get("step") == "START":
-            print("🔥", parsed_result.get("content"))
+        if parsed_result.step == "START":
+            print("🔥", parsed_result.content)
             continue
 
-        if parsed_result.get("step") == "TOOL":
-            tool_to_call = parsed_result.get("tool")
-            tool_input = parsed_result.get("input")
+        if parsed_result.step == "TOOL":
+            tool_to_call = parsed_result.tool
+            tool_input = parsed_result.input
             print(f"🤫: {tool_to_call} ({tool_input})")
 
             tool_response = available_tools[tool_to_call](tool_input)
@@ -141,11 +147,10 @@ while True:
             continue
 
 
-        if parsed_result.get("step") == "PLAN":
-            print("🧠", parsed_result.get("content"))
+        if parsed_result.step == "PLAN":
+            print("🧠", parsed_result.content)
             continue
 
-        if parsed_result.get("step") == "OUTPUT":
-            print("🕯️", parsed_result.get("content"))
+        if parsed_result.step == "OUTPUT":
+            print("🕯️", parsed_result.content)
             break
-
