@@ -1,5 +1,5 @@
 from pathlib import Path
-from langchain_community.document_loaders import PyPDFLoader # # Now we can instantiate our model object and load documents
+from langchain_community.document_loaders import PyPDFLoader # Now we can instantiate our model object and load documents
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from dotenv import load_dotenv
@@ -12,7 +12,7 @@ load_dotenv()
 # .parent gets the directory containing the script
 # / operator joins the directory with the filename
 
-pdf_path = Path(__file__).parent / "Interview.pdf"
+pdf_path = Path(__file__).parent / "Foundations-of-Machine-Learning-Mehryar-Mohri-Afshin-Rostamizadeh-Ameet-Talwalkar.pdf"
 
 
 # Load this file in python program
@@ -41,7 +41,8 @@ vectore_store = QdrantVectorStore.from_documents(
     documents=chunks,
     embedding= embedding_model,
     url="http://localhost:6333",
-    collection_name= "Learning_RAG"
+    collection_name= "Learning_RAG",
+    force_recreate=True  # This wipes the old data and starts fresh
 )
 
 
