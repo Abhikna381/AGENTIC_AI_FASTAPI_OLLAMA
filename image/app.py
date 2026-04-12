@@ -4,6 +4,7 @@ from fastapi.responses import FileResponse
 import base64
 from openai import OpenAI
 from dotenv import load_dotenv
+import os
 
 load_dotenv()
 
@@ -22,7 +23,7 @@ app.add_middleware(
 # ✅ Serve HTML
 @app.get("/")
 def home():
-    return FileResponse("index.html")
+    return FileResponse(os.path.join(os.path.dirname(__file__), "index.html"))
 
 
 # ✅ Image Caption API
