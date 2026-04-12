@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Caption Generator</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #0f172a, #1e293b);
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+        }
+    </style>
+</head>
+
+<body class="text-white flex items-center justify-center min-h-screen">
+
+<div class="glass p-8 w-[400px] text-center shadow-2xl">
+
+    <h1 class="text-2xl font-bold mb-4">🧠 AI Caption Generator</h1>
+
+    <!-- Drag Drop -->
+    <div id="drop-area"
+         class="border-2 border-dashed border-gray-400 p-6 rounded-lg cursor-pointer hover:border-blue-400">
+
+        <p>Drag & Drop Image</p>
+        <p class="text-sm text-gray-300">or click</p>
+
+        <input type="file" id="fileElem" class="hidden">
+    </div>
+
+    <!-- Preview -->
+    <img id="preview" class="mt-4 rounded-lg hidden max-h-60 mx-auto">
+
+    <!-- Buttons -->
+    <div class="mt-4 space-x-2">
+        <button onclick="uploadImage()"
+                class="bg-blue-500 px-4 py-2 rounded-lg hover:bg-blue-600">
+            Generate
+        </button>
+
+        <button onclick="uploadImage()"
+                class="bg-purple-500 px-4 py-2 rounded-lg hover:bg-purple-600">
+            Regenerate 🔁
+        </button>
+    </div>
+
+    <!-- Spinner -->
+    <p id="spinner" class="hidden mt-3 text-blue-300">⏳ Generating...</p>
+
+    <!-- Result -->
+    <div id="result" class="mt-4 text-left space-y-2"></div>
+
+    <!-- Voice Buttons -->
+    <div class="mt-4 space-x-2">
+        <button onclick="speakText()"
+                class="bg-green-500 px-4 py-2 rounded-lg hover:bg-green-600">
+            🔊 Speak
+        </button>
+
+        <button onclick="stopSpeech()"
+                class="bg-red-500 px-4 py-2 rounded-lg hover:bg-red-600">
+            ⛔ Stop
+        </button>
+    </div>
+
+</div>
+
+<script>
+let selectedFile = null;
+
+const dropArea = document.getElementById("drop-area");
+const fileInput = document.getElementById("fileElem");
+
+// click
+dropArea.addEventListener("click", () => fileInput.click());
+
+// select
+fileInput.addEventListener("change", (e) => handleFile(e.target.files[0]));
+
+// drag
+dropArea.addEventListener("dragover", (e) => {
+    e.preventDefault();
+});
+
+dropArea.addEventListener("drop", (e) => {
+    e.preventDefault();
+    handleFile(e.dataTransfer.files[0]);
+});
+
+// preview
+function handleFile(file) {
+    if (!file) return;
+
+    selectedFile = file;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const img = document.getElementById("preview");
+        img.src = e.target.result;
+        img.classList.remove("hidden");
+    };
+    reader.readAsDataURL(file);
+}
+
+// upload
+async function uploadImage() {
+    if (!selectedFile) {
+        alert("Select image!");
+        return;
+    }
+
+    document.getElementById("spinner").classList.remove("hidden");
+    document.getElementById("result").innerHTML = "";
+
+    const formData = new FormData();
+    formData.append("file", selectedFile);
+
+    try {
+        const response = await fetch("http://127.0.0.1:8000/upload-image", {
+            method: "POST",
+            body: formData
+        });
+
+        const data = await response.json();
+
+        const text = data.caption || "No caption";
+
+        const resultDiv = document.getElementById("result");
+
+        resultDiv.innerHTML = text.split("\n").map(line => {
+            if (line.toLowerCase().includes("creative"))
+                return `<p class="text-blue-400 font-bold">${line}</p>`;
+            if (line.toLowerCase().includes("formal"))
+                return `<p class="text-green-400 font-bold">${line}</p>`;
+            if (line.toLowerCase().includes("funny"))
+                return `<p class="text-pink-400 font-bold">${line}</p>`;
+            return `<p>${line}</p>`;
+        }).join("");
+
+    } catch (err) {
+        console.error(err);
+        document.getElementById("result").innerText = "Error!";
+    }
+
+    document.getElementById("spinner").classList.add("hidden");
+}
+
+// 🔊 speak
+function speakText() {
+    const text = document.getElementById("result").innerText;
+
+    if (!text) {
+        alert("No caption!");
+        return;
+    }
+
+    window.speechSynthesis.cancel();
+
+    const speech = new SpeechSynthesisUtterance(text);
+    speech.lang = "en-US";
+    speech.rate = 1;
+
+    window.speechSynthesis.speak(speech);
+}
+
+// ⛔ stop
+function stopSpeech() {
+    window.speechSynthesis.cancel();
+}
+</script>
+
+</body>
+</html>
