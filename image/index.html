@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>ANKITA'S AKSHAT AI Image Caption</title>
+    <title>ANKITA'S AKSHAT AI IMAGE CAPTION</title>
 
     <style>
         body {
@@ -15,12 +15,19 @@
 
         .container {
             width: 600px;
-            margin-top: 40px;
+            margin-top: 30px;
         }
 
-        h1 {
+        /* ✅ CENTERED MODERN TITLE */
+        .header {
+            width: 100%;
             text-align: center;
-            margin-bottom: 20px;
+            font-size: 30px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            margin-bottom: 25px;
+            text-transform: uppercase;
+            color: #38bdf8;
         }
 
         /* Chat Box */
@@ -91,6 +98,7 @@
             display: flex;
             gap: 10px;
             justify-content: center;
+            margin-top: 10px;
         }
 
         /* Loader */
@@ -107,21 +115,29 @@
         @keyframes spin {
             100% { transform: rotate(360deg); }
         }
+
     </style>
 </head>
 
 <body>
 
 <div class="container">
-    <h1>🤖 ANKITA'S AKSHAT AI Image Caption</h1>
 
+    <!-- ✅ CENTER TITLE -->
+    <div class="header">
+        ANKITA'S AKSHAT AI IMAGE CAPTION
+    </div>
+
+    <!-- CHAT BOX -->
     <div class="chat-box" id="chatBox"></div>
 
+    <!-- UPLOAD -->
     <div class="upload-box" id="uploadBox">
         Drag & Drop Image OR Click to Upload
         <input type="file" id="fileInput" accept="image/*">
     </div>
 
+    <!-- BUTTONS -->
     <div class="btn-row">
         <button onclick="uploadImage()">Generate Caption</button>
         <button onclick="startVoice()">🎤 Speak</button>
@@ -131,9 +147,11 @@
         <button onclick="readCaption()">🔊 Read</button>
         <button onclick="stopReading()">⏹️ Stop</button>
     </div>
+
 </div>
 
 <script>
+
     const uploadBox = document.getElementById("uploadBox");
     const fileInput = document.getElementById("fileInput");
     const chatBox = document.getElementById("chatBox");
@@ -168,7 +186,7 @@
         addMessage("🖼 Image dropped", "user");
     });
 
-    // Add messages
+    // Messages
     function addMessage(text, type) {
         const div = document.createElement("div");
         div.className = "message " + type;
@@ -182,7 +200,7 @@
         }
     }
 
-    // Upload Image
+    // Upload image
     async function uploadImage() {
         if (!selectedFile) {
             alert("Please select an image first!");
@@ -216,7 +234,7 @@
         }
     }
 
-    // 🎤 Voice Input
+    // 🎤 Voice input
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
     function startVoice() {
@@ -235,13 +253,9 @@
             const text = event.results[0][0].transcript;
             addMessage(text, "user");
         };
-
-        recognition.onerror = function() {
-            addMessage("❌ Voice error", "bot");
-        };
     }
 
-    // 🔊 Read Caption
+    // 🔊 Read caption
     function readCaption() {
         if (!currentCaption) {
             alert("No caption to read!");
@@ -254,7 +268,7 @@
         window.speechSynthesis.speak(speech);
     }
 
-    // ⏹️ Stop
+    // ⏹️ Stop speech
     function stopReading() {
         window.speechSynthesis.cancel();
     }
