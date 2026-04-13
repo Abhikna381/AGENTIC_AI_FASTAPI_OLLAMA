@@ -11,7 +11,7 @@ load_dotenv()
 app = FastAPI()
 client = OpenAI()
 
-# ✅ CORS (important)
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -20,42 +20,43 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ✅ Serve HTML
+BASE_DIR = os.path.dirname(__file__)
+
+# Home page
 @app.get("/")
 def home():
-    return FileResponse(os.path.join(os.path.dirname(__file__), "index.html"))
+    return FileResponse(os.path.join(BASE_DIR, "index.html"))
 
+# Favicon
+@app.get("/favicon.ico")
+def favicon():
+    return FileResponse(os.path.join(BASE_DIR, "favicon.ico"))
 
-# ✅ Image Caption API
+# Image Caption API
 @app.post("/upload-image")
 async def upload_image(file: UploadFile = File(...)):
     try:
         image_bytes = await file.read()
         base64_image = base64.b64encode(image_bytes).decode("utf-8")
 
+        content_type = file.content_type
+
         response = client.responses.create(
-            model="gpt-4.1",
+            model="gpt-4.1-mini",
             input=[
                 {
                     "role": "user",
                     "content": [
                         {
                             "type": "input_text",
-                            "text": """
-Analyze this image and generate 3 captions:
-1. Creative (imaginative)
-2. Formal (professional)
-3. Funny (humorous)
-
-Return format:
+                            "text": """Analyze this image and generate 3 captions:
 Creative:
 Formal:
-Funny:
-"""
+Funny:"""
                         },
                         {
                             "type": "input_image",
-                            "image_url": f"data:image/jpeg;base64,{base64_image}",
+                            "image_url": f"data:{content_type};base64,{base64_image}",
                         },
                     ],
                 }
@@ -63,7 +64,6 @@ Funny:
         )
 
         result = response.output[0].content[0].text.strip()
-
         return {"caption": result}
 
     except Exception as e:
