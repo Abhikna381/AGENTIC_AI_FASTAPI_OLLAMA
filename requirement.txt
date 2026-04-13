@@ -5,3 +5,5 @@ openai
 python-dotenv
 faiss-cpu
 numpy
+python-jose
+passlib[bcrypt]

@@ -20,7 +20,6 @@ body {
 
 h1 {
     text-align: center;
-    font-size: 24px;
 }
 
 .chat {
@@ -64,34 +63,12 @@ button {
     cursor: pointer;
 }
 
-.upload {
-    border: 2px dashed #3b82f6;
-    padding: 12px;
-    margin-top: 10px;
-    text-align: center;
-    border-radius: 10px;
+.loginBox {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
 }
 
-.preview {
-    width: 100%;
-    margin-top: 10px;
-    border-radius: 10px;
-    display: none;
-}
-
-.loader {
-    border: 3px solid #444;
-    border-top: 3px solid #3b82f6;
-    width: 25px;
-    height: 25px;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin: 10px auto;
-}
-
-@keyframes spin {
-    100% { transform: rotate(360deg); }
-}
 </style>
 </head>
 
@@ -101,160 +78,85 @@ button {
 
 <h1>🤖 ANKITA'S AKSHAT AI</h1>
 
+<!-- 🔐 LOGIN -->
+<div class="loginBox">
+    <input id="username" placeholder="username">
+    <input id="password" type="password" placeholder="password">
+    <button onclick="login()">Login</button>
+</div>
+
+<!-- 💬 CHAT BOX -->
 <div class="chat" id="chat"></div>
 
 <div class="inputBox">
-    <input id="msg" placeholder="Ask something..." />
+    <input id="msg" placeholder="Ask something...">
     <button onclick="sendMsg()">Send</button>
 </div>
-
-<div class="upload" onclick="file.click()">
-Upload / Drag Image
-<input type="file" id="file" hidden>
-<img id="preview" class="preview">
-</div>
-
-<button onclick="upload()">Generate Caption</button>
-<button onclick="startVoice()">🎤 Voice</button>
-<button onclick="read()">🔊 Read</button>
-<button onclick="stop()">⏹ Stop</button>
-
-<button onclick="openCam()">📸 Camera</button>
-<button onclick="capture()">📷 Capture</button>
-
-<video id="video" style="width:100%; display:none;"></video>
-<canvas id="canvas" style="display:none;"></canvas>
 
 </div>
 
 <script>
 
-let fileData = null;
-let lastText = "";
-let speech;
-
+let token = "";
 const chat = document.getElementById("chat");
-const file = document.getElementById("file");
-const preview = document.getElementById("preview");
 
-file.onchange = e => {
-    fileData = e.target.files[0];
-    preview.src = URL.createObjectURL(fileData);
-    preview.style.display = "block";
-};
+/* ---------------- LOGIN ---------------- */
+async function login() {
 
-/* CHAT UI */
-function add(text, type) {
-    let div = document.createElement("div");
-    div.className = "msg " + type;
-    div.innerText = text;
-    chat.appendChild(div);
-    chat.scrollTop = chat.scrollHeight;
+    const form = new URLSearchParams();
+    form.append("username", document.getElementById("username").value);
+    form.append("password", document.getElementById("password").value);
 
-    if(type === "bot") lastText = text;
-}
-
-/* STREAMING EFFECT (ChatGPT style) */
-function stream(text) {
-    let div = document.createElement("div");
-    div.className = "msg bot";
-    chat.appendChild(div);
-
-    let i = 0;
-    let interval = setInterval(() => {
-        div.innerText += text[i];
-        i++;
-        if(i >= text.length) clearInterval(interval);
-    }, 15);
-
-    lastText = text;
-}
-
-/* CHAT */
-async function sendMsg() {
-    let msg = document.getElementById("msg").value;
-
-    add(msg, "user");
-
-    let res = await fetch("/chat", {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({message: msg})
-    });
-
-    let data = await res.json();
-    stream(data.reply);
-}
-
-/* IMAGE */
-async function upload() {
-    if(!fileData) return alert("Select image first");
-
-    let loader = document.createElement("div");
-    loader.className = "loader";
-    chat.appendChild(loader);
-
-    let form = new FormData();
-    form.append("file", fileData);
-
-    let res = await fetch("/upload-image", {
+    const res = await fetch("/login", {
         method: "POST",
         body: form
     });
 
-    let data = await res.json();
+    const data = await res.json();
 
-    loader.remove();
-    stream(data.caption);
+    if (!data.access_token) {
+        alert("Login Failed");
+        return;
+    }
+
+    token = data.access_token;
+
+    alert("Login Successful 🚀");
 }
 
-/* VOICE */
-function startVoice() {
-    const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    rec.lang = "en-US";
-    rec.start();
-
-    rec.onresult = e => {
-        let text = e.results[0][0].transcript;
-        add(text, "user");
-    };
+/* ---------------- CHAT UI ---------------- */
+function addMessage(text, type) {
+    const div = document.createElement("div");
+    div.className = "msg " + type;
+    div.innerText = text;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
 }
 
-/* READ */
-function read() {
-    speech = new SpeechSynthesisUtterance(lastText);
-    window.speechSynthesis.speak(speech);
-}
+/* ---------------- CHAT API CALL ---------------- */
+async function sendMsg() {
 
-/* STOP */
-function stop() {
-    window.speechSynthesis.cancel();
-}
+    const msg = document.getElementById("msg").value;
 
-/* CAMERA */
-let video = document.getElementById("video");
-let streamObj;
+    if (!token) {
+        alert("Please login first!");
+        return;
+    }
 
-async function openCam() {
-    streamObj = await navigator.mediaDevices.getUserMedia({video:true});
-    video.srcObject = streamObj;
-    video.style.display = "block";
-    video.play();
-}
+    addMessage(msg, "user");
 
-function capture() {
-    let canvas = document.getElementById("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
-    let ctx = canvas.getContext("2d");
-    ctx.drawImage(video,0,0);
-
-    canvas.toBlob(blob => {
-        fileData = new File([blob],"cam.jpg",{type:"image/jpeg"});
-        preview.src = URL.createObjectURL(fileData);
-        preview.style.display = "block";
+    const res = await fetch("/chat", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
+        },
+        body: JSON.stringify({ message: msg })
     });
+
+    const data = await res.json();
+
+    addMessage(data.reply, "bot");
 }
 
 </script>
