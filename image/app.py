@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 import base64
 import os
 
-from auth import authenticate_user, create_access_token, decode_token
+from image.auth import authenticate_user, create_access_token, decode_token
 from memory import add_memory, search_memory
 
 load_dotenv()
