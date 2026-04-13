@@ -78,18 +78,11 @@
             display: none;
         }
 
-        /* Image Preview */
-        .preview {
-            margin-top: 10px;
-            text-align: center;
-        }
-
+        /* Image preview */
         .preview img {
             width: 100%;
-            max-height: 250px;
-            object-fit: contain;
-            border-radius: 10px;
             margin-top: 10px;
+            border-radius: 10px;
             border: 2px solid #38bdf8;
         }
 
@@ -129,6 +122,41 @@
         @keyframes spin {
             100% { transform: rotate(360deg); }
         }
+
+        /* Typing animation */
+        .typing {
+            display: inline-flex;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .dot {
+            width: 6px;
+            height: 6px;
+            background: #38bdf8;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% {
+                transform: scale(0);
+                opacity: 0.3;
+            }
+            40% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .preview {
+            margin-top: 10px;
+            text-align: center;
+        }
+
     </style>
 </head>
 
@@ -144,8 +172,6 @@
     <div class="upload-box" id="uploadBox">
         Drag & Drop Image OR Click to Upload
         <input type="file" id="fileInput" accept="image/*">
-        
-        <!-- IMAGE PREVIEW -->
         <div class="preview" id="preview"></div>
     </div>
 
@@ -163,6 +189,7 @@
 </div>
 
 <script>
+
 const uploadBox = document.getElementById("uploadBox");
 const fileInput = document.getElementById("fileInput");
 const chatBox = document.getElementById("chatBox");
@@ -172,9 +199,7 @@ let selectedFile = null;
 let currentCaption = "";
 let speech = null;
 
-/* =========================
-   CLICK UPLOAD
-========================= */
+/* CLICK UPLOAD */
 uploadBox.onclick = () => fileInput.click();
 
 fileInput.onchange = (e) => {
@@ -183,9 +208,7 @@ fileInput.onchange = (e) => {
     addMessage("🖼 Image selected", "user");
 };
 
-/* =========================
-   DRAG & DROP
-========================= */
+/* DRAG & DROP */
 uploadBox.addEventListener("dragover", (e) => {
     e.preventDefault();
     uploadBox.classList.add("dragover");
@@ -204,9 +227,7 @@ uploadBox.addEventListener("drop", (e) => {
     addMessage("🖼 Image dropped", "user");
 });
 
-/* =========================
-   IMAGE PREVIEW FUNCTION
-========================= */
+/* IMAGE PREVIEW */
 function showPreview(file) {
     const reader = new FileReader();
 
@@ -217,9 +238,7 @@ function showPreview(file) {
     reader.readAsDataURL(file);
 }
 
-/* =========================
-   CHAT MESSAGE
-========================= */
+/* CHAT MESSAGE */
 function addMessage(text, type) {
     const div = document.createElement("div");
     div.className = "message " + type;
@@ -233,20 +252,39 @@ function addMessage(text, type) {
     }
 }
 
-/* =========================
-   UPLOAD IMAGE TO BACKEND
-========================= */
+/* TYPING ANIMATION */
+function showTyping() {
+    const div = document.createElement("div");
+    div.className = "message bot";
+    div.id = "typingBox";
+
+    div.innerHTML = `
+        <div class="typing">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+    `;
+
+    chatBox.appendChild(div);
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function removeTyping() {
+    const el = document.getElementById("typingBox");
+    if (el) el.remove();
+}
+
+/* UPLOAD IMAGE */
 async function uploadImage() {
     if (!selectedFile) {
         alert("Please select an image first!");
         return;
     }
 
-    addMessage("⏳ Processing...", "bot");
+    addMessage("📤 Uploading image...", "user");
 
-    const loader = document.createElement("div");
-    loader.className = "loader";
-    chatBox.appendChild(loader);
+    showTyping();
 
     const formData = new FormData();
     formData.append("file", selectedFile);
@@ -259,23 +297,22 @@ async function uploadImage() {
 
         const data = await response.json();
 
-        loader.remove();
+        removeTyping();
+
         addMessage(data.caption, "bot");
 
     } catch (error) {
-        loader.remove();
+        removeTyping();
         addMessage("❌ Error occurred", "bot");
     }
 }
 
-/* =========================
-   VOICE INPUT
-========================= */
+/* VOICE INPUT */
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
 function startVoice() {
     if (!SpeechRecognition) {
-        alert("Voice not supported in this browser");
+        alert("Voice not supported");
         return;
     }
 
@@ -295,12 +332,10 @@ function startVoice() {
     };
 }
 
-/* =========================
-   READ CAPTION
-========================= */
+/* READ CAPTION */
 function readCaption() {
     if (!currentCaption) {
-        alert("No caption to read!");
+        alert("No caption available!");
         return;
     }
 
@@ -310,12 +345,11 @@ function readCaption() {
     window.speechSynthesis.speak(speech);
 }
 
-/* =========================
-   STOP SPEECH
-========================= */
+/* STOP SPEECH */
 function stopReading() {
     window.speechSynthesis.cancel();
 }
+
 </script>
 
 </body>
