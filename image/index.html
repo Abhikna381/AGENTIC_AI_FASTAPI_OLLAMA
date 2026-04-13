@@ -3,13 +3,10 @@
 <head>
     <title>AI Image Caption</title>
 
-    <!-- ✅ Favicon -->
-    <link rel="icon" href="/favicon.ico" type="image/x-icon">
-
     <style>
         body {
             margin: 0;
-            font-family: Arial;
+            font-family: Arial, sans-serif;
             background: #0f172a;
             color: white;
             display: flex;
@@ -23,40 +20,49 @@
 
         h1 {
             text-align: center;
+            margin-bottom: 20px;
         }
 
+        /* Chat Box */
         .chat-box {
             background: #1e293b;
             padding: 20px;
             border-radius: 12px;
-            min-height: 350px;
+            min-height: 300px;
+            margin-bottom: 20px;
             overflow-y: auto;
-            margin-bottom: 15px;
         }
 
         .message {
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             padding: 10px;
-            border-radius: 10px;
+            border-radius: 8px;
             max-width: 80%;
         }
 
         .user {
             background: #334155;
             margin-left: auto;
+            text-align: right;
         }
 
         .bot {
-            background: #0ea5e9;
+            background: #1e40af;
+            text-align: left;
         }
 
+        /* Upload box */
         .upload-box {
             border: 2px dashed #38bdf8;
             padding: 20px;
             text-align: center;
             border-radius: 10px;
             cursor: pointer;
-            margin-bottom: 10px;
+            transition: 0.3s;
+        }
+
+        .upload-box:hover {
+            background: #1e40af;
         }
 
         .upload-box.dragover {
@@ -67,24 +73,27 @@
             display: none;
         }
 
-        .controls {
-            display: flex;
-            gap: 10px;
-        }
-
         button {
-            flex: 1;
-            padding: 10px;
+            margin-top: 10px;
+            padding: 10px 18px;
             background: #38bdf8;
             border: none;
-            border-radius: 8px;
+            border-radius: 6px;
             cursor: pointer;
+            font-weight: bold;
         }
 
         button:hover {
             background: #0ea5e9;
         }
 
+        .btn-row {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        /* Loader */
         .loader {
             border: 4px solid #f3f3f3;
             border-top: 4px solid #38bdf8;
@@ -97,12 +106,6 @@
 
         @keyframes spin {
             100% { transform: rotate(360deg); }
-        }
-
-        img.preview {
-            max-width: 100%;
-            margin-top: 10px;
-            border-radius: 10px;
         }
     </style>
 </head>
@@ -119,11 +122,14 @@
         <input type="file" id="fileInput" accept="image/*">
     </div>
 
-    <div class="controls">
+    <div class="btn-row">
+        <button onclick="uploadImage()">Generate Caption</button>
         <button onclick="startVoice()">🎤 Speak</button>
-        <button onclick="stopVoice()">⛔ Stop</button>
-        <button onclick="readLastMessage()">🔊 Read</button>
-        <button onclick="uploadImage()">Generate</button>
+    </div>
+
+    <div class="btn-row">
+        <button onclick="readCaption()">🔊 Read</button>
+        <button onclick="stopReading()">⏹️ Stop</button>
     </div>
 </div>
 
@@ -133,79 +139,53 @@
     const chatBox = document.getElementById("chatBox");
 
     let selectedFile = null;
-    let recognition;
+    let currentCaption = "";
+    let speech = null;
 
+    // Click upload
     uploadBox.onclick = () => fileInput.click();
 
     fileInput.onchange = (e) => {
         selectedFile = e.target.files[0];
         addMessage("🖼 Image selected", "user");
-        previewImage(selectedFile);
     };
+
+    // Drag & Drop
+    uploadBox.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        uploadBox.classList.add("dragover");
+    });
+
+    uploadBox.addEventListener("dragleave", () => {
+        uploadBox.classList.remove("dragover");
+    });
 
     uploadBox.addEventListener("drop", (e) => {
         e.preventDefault();
+        uploadBox.classList.remove("dragover");
+
         selectedFile = e.dataTransfer.files[0];
         addMessage("🖼 Image dropped", "user");
-        previewImage(selectedFile);
     });
 
-    function previewImage(file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            addMessage(`<img src="${e.target.result}" class="preview">`, "user");
-        };
-        reader.readAsDataURL(file);
-    }
-
+    // Add messages
     function addMessage(text, type) {
         const div = document.createElement("div");
         div.className = "message " + type;
-        div.innerHTML = text;
+        div.innerText = text;
+
         chatBox.appendChild(div);
         chatBox.scrollTop = chatBox.scrollHeight;
-    }
 
-    // 🎤 Voice
-    function startVoice() {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-        if (!SpeechRecognition) {
-            alert("Voice not supported");
-            return;
-        }
-
-        recognition = new SpeechRecognition();
-        recognition.start();
-
-        addMessage("🎤 Listening...", "bot");
-
-        recognition.onresult = (event) => {
-            const text = event.results[0][0].transcript;
-            addMessage(text, "user");
-        };
-    }
-
-    function stopVoice() {
-        if (recognition) {
-            recognition.stop();
-            addMessage("🛑 Stopped", "bot");
+        if (type === "bot") {
+            currentCaption = text;
         }
     }
 
-    // 🔊 Read
-    function readLastMessage() {
-        const msgs = document.querySelectorAll(".bot");
-        if (msgs.length === 0) return;
-
-        const text = msgs[msgs.length - 1].innerText;
-        speechSynthesis.speak(new SpeechSynthesisUtterance(text));
-    }
-
-    // 🚀 Upload
+    // Upload Image
     async function uploadImage() {
         if (!selectedFile) {
-            alert("Select image first");
+            alert("Please select an image first!");
             return;
         }
 
@@ -218,19 +198,67 @@
         const formData = new FormData();
         formData.append("file", selectedFile);
 
-        const res = await fetch("/upload-image", {
-            method: "POST",
-            body: formData
-        });
+        try {
+            const response = await fetch("/upload-image", {
+                method: "POST",
+                body: formData
+            });
 
-        const data = await res.json();
-        loader.remove();
+            const data = await response.json();
 
-        addMessage(`<pre>${data.caption}</pre>`, "bot");
+            loader.remove();
 
-        // 🔊 Auto speak
-        speechSynthesis.speak(new SpeechSynthesisUtterance(data.caption));
+            addMessage(data.caption, "bot");
+
+        } catch (error) {
+            loader.remove();
+            addMessage("❌ Error occurred", "bot");
+        }
     }
+
+    // 🎤 Voice Input
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    function startVoice() {
+        if (!SpeechRecognition) {
+            alert("Voice not supported");
+            return;
+        }
+
+        const recognition = new SpeechRecognition();
+        recognition.lang = "en-US";
+        recognition.start();
+
+        addMessage("🎤 Listening...", "bot");
+
+        recognition.onresult = function(event) {
+            const text = event.results[0][0].transcript;
+            addMessage(text, "user");
+        };
+
+        recognition.onerror = function() {
+            addMessage("❌ Voice error", "bot");
+        };
+    }
+
+    // 🔊 Read Caption
+    function readCaption() {
+        if (!currentCaption) {
+            alert("No caption to read!");
+            return;
+        }
+
+        speech = new SpeechSynthesisUtterance(currentCaption);
+        speech.lang = "en-US";
+
+        window.speechSynthesis.speak(speech);
+    }
+
+    // ⏹️ Stop
+    function stopReading() {
+        window.speechSynthesis.cancel();
+    }
+
 </script>
 
 </body>
