@@ -83,10 +83,20 @@ input, button {
 
 let token = "";
 
+// ✅ FIXED DOM REFERENCES
+const chat = document.getElementById("chat");
+const username = document.getElementById("username");
+const password = document.getElementById("password");
+const file = document.getElementById("file");
+const preview = document.getElementById("preview");
+const loginBox = document.getElementById("loginBox");
+
+/* ADD MESSAGE */
 function add(text, type){
     let div = document.createElement("div");
     div.className = "msg " + type;
     div.innerText = text;
+
     chat.appendChild(div);
     chat.scrollTop = chat.scrollHeight;
 }
@@ -103,6 +113,12 @@ async function login(){
     });
 
     let data = await res.json();
+
+    if (!data.access_token) {
+        alert("Login failed");
+        return;
+    }
+
     token = data.access_token;
 
     alert("Login Success");
@@ -112,6 +128,9 @@ async function login(){
 /* CHAT */
 async function sendMsg(){
     let msg = document.getElementById("msg").value;
+
+    if (!msg) return;
+
     add(msg, "user");
 
     let res = await fetch("/chat", {
@@ -124,16 +143,27 @@ async function sendMsg(){
     });
 
     let data = await res.json();
-    add(data.reply, "bot");
+
+    if (data.reply) {
+        add(data.reply, "bot");
+    } else {
+        add("Error: " + JSON.stringify(data), "bot");
+    }
 }
 
-/* IMAGE */
+/* IMAGE PREVIEW */
 file.onchange = e => {
-    preview.src = URL.createObjectURL(e.target.files[0]);
+    preview.src = URL.createObjectURL(file.files[0]);
     preview.style.display = "block";
 };
 
+/* IMAGE UPLOAD */
 async function upload(){
+    if (!file.files[0]) {
+        alert("Select image first");
+        return;
+    }
+
     let form = new FormData();
     form.append("file", file.files[0]);
 
@@ -143,7 +173,12 @@ async function upload(){
     });
 
     let data = await res.json();
-    add("🖼 " + data.caption, "bot");
+
+    if (data.caption) {
+        add("🖼 " + data.caption, "bot");
+    } else {
+        add("Image error", "bot");
+    }
 }
 
 </script>
