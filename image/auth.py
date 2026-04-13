@@ -1,31 +1,26 @@
 import jwt
 import datetime
 
-SECRET = "mysecretkey"
+SECRET_KEY = "supersecret"
 
-# fake users
-users = {
-    "admin": "1234",
-    "user": "1234"
+fake_user = {
+    "username": "admin",
+    "password": "admin"
 }
 
 def authenticate_user(username, password):
-    if username in users and users[username] == password:
-        return {"username": username}
+    if username == fake_user["username"] and password == fake_user["password"]:
+        return fake_user
     return None
 
-
 def create_access_token(data: dict):
-    payload = {
-        "sub": data["sub"],
-        "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=2)
-    }
-    return jwt.encode(payload, SECRET, algorithm="HS256")
-
+    payload = data.copy()
+    payload["exp"] = datetime.datetime.utcnow() + datetime.timedelta(hours=2)
+    return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
 
 def decode_token(token: str):
     try:
-        payload = jwt.decode(token, SECRET, algorithms=["HS256"])
-        return payload["sub"]
+        decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        return decoded.get("sub")
     except:
         return None

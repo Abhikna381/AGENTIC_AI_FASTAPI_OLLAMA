@@ -36,7 +36,7 @@ def home():
 def favicon():
     return FileResponse(os.path.join(BASE_DIR, "favicon.ico"))
 
-# LOGIN
+# ---------------- LOGIN ----------------
 @app.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends()):
     user = authenticate_user(form_data.username, form_data.password)
@@ -45,9 +45,10 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     token = create_access_token({"sub": user["username"]})
+
     return {"access_token": token, "token_type": "bearer"}
 
-# CHAT (RAG + JWT)
+# ---------------- CHAT (RAG + JWT) ----------------
 @app.post("/chat")
 def chat(data: dict, token: str = Depends(oauth2_scheme)):
     username = decode_token(token)
@@ -82,7 +83,7 @@ Message:
 
     return {"reply": reply}
 
-# IMAGE CAPTION
+# ---------------- IMAGE CAPTION (FIXED FEATURE) ----------------
 @app.post("/upload-image")
 async def upload_image(file: UploadFile = File(...)):
     img = await file.read()
@@ -93,10 +94,13 @@ async def upload_image(file: UploadFile = File(...)):
         input=[{
             "role": "user",
             "content": [
-                {"type": "input_text", "text": "Generate captions"},
+                {"type": "input_text", "text": "Describe this image in detail"},
                 {"type": "input_image", "image_url": f"data:image/jpeg;base64,{b64}"}
             ]
         }]
     )
 
-    return {"caption": response.output[0].content[0].text}
+    caption = response.output[0].content[0].text
+    add_memory("Image caption: " + caption)
+
+    return {"caption": caption}

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>ChatGPT Clone</title>
+<title>ANKITA'S AKSHAT AI</title>
 
 <style>
 body {
@@ -20,11 +20,11 @@ body {
 
 h1 {
     text-align: center;
+    font-size: 26px;
 }
 
-/* CHAT */
 .chat {
-    height: 400px;
+    height: 420px;
     overflow-y: auto;
     background: #111827;
     padding: 15px;
@@ -35,27 +35,40 @@ h1 {
     padding: 10px;
     margin: 8px 0;
     border-radius: 10px;
+    max-width: 80%;
 }
 
-.user { background: #374151; text-align: right; }
+.user { background: #374151; margin-left: auto; }
 .bot { background: #1d4ed8; }
 
-/* INPUT */
-input, button {
-    padding: 10px;
-    margin: 5px;
-    border-radius: 8px;
-    border: none;
+.upload {
+    border: 2px dashed #3b82f6;
+    padding: 15px;
+    margin-top: 10px;
+    text-align: center;
+    border-radius: 10px;
+}
+
+.preview {
+    width: 100%;
+    margin-top: 10px;
+    display: none;
+    border-radius: 10px;
 }
 
 button {
+    padding: 10px;
+    margin: 5px;
     background: #3b82f6;
+    border: none;
     color: white;
-    cursor: pointer;
+    border-radius: 8px;
 }
 
-button:hover {
-    background: #2563eb;
+video {
+    width: 100%;
+    display: none;
+    border-radius: 10px;
 }
 </style>
 </head>
@@ -64,32 +77,47 @@ button:hover {
 
 <div class="container">
 
-<h1>🤖 CHATGPT CLONE</h1>
+<h1>🤖 ANKITA'S AKSHAT AI</h1>
 
 <!-- LOGIN -->
-<div>
-    <input id="user" placeholder="username">
-    <input id="pass" type="password" placeholder="password">
-    <button onclick="login()">Login</button>
-</div>
+<input id="user" placeholder="username">
+<input id="pass" placeholder="password" type="password">
+<button onclick="login()">Login</button>
 
-<!-- CHAT -->
 <div class="chat" id="chat"></div>
 
-<input id="msg" placeholder="message">
-<button onclick="send()">Send</button>
+<input type="text" id="msg" placeholder="Ask something..." style="width:100%; padding:10px;">
+<button onclick="sendMsg()">Send</button>
 
-<button onclick="startVoice()">🎤 Voice</button>
-<button onclick="read()">🔊 Read</button>
-<button onclick="stop()">⏹ Stop</button>
+<!-- IMAGE -->
+<div class="upload" onclick="file.click()">
+Upload / Drag Image
+<input type="file" id="file" hidden>
+<img id="preview" class="preview">
+</div>
+
+<button onclick="upload()">Generate Caption</button>
+
+<video id="video"></video>
+<canvas id="canvas" style="display:none;"></canvas>
 
 </div>
 
 <script>
 
+let fileData = null;
 let token = "";
 let lastText = "";
+
 const chat = document.getElementById("chat");
+const file = document.getElementById("file");
+const preview = document.getElementById("preview");
+
+file.onchange = e => {
+    fileData = e.target.files[0];
+    preview.src = URL.createObjectURL(fileData);
+    preview.style.display = "block";
+};
 
 function add(text, type) {
     let div = document.createElement("div");
@@ -97,28 +125,23 @@ function add(text, type) {
     div.innerText = text;
     chat.appendChild(div);
     chat.scrollTop = chat.scrollHeight;
-    if(type === "bot") lastText = text;
 }
 
 /* LOGIN */
 async function login() {
-    let form = new URLSearchParams();
+    let form = new FormData();
     form.append("username", document.getElementById("user").value);
     form.append("password", document.getElementById("pass").value);
 
-    let res = await fetch("/login", {
-        method: "POST",
-        body: form
-    });
-
+    let res = await fetch("/login", { method:"POST", body: form });
     let data = await res.json();
-    token = data.access_token;
 
-    alert("Login success");
+    token = data.access_token;
+    alert("Logged in!");
 }
 
 /* CHAT */
-async function send() {
+async function sendMsg() {
     let msg = document.getElementById("msg").value;
     add(msg, "user");
 
@@ -135,26 +158,18 @@ async function send() {
     add(data.reply, "bot");
 }
 
-/* VOICE */
-function startVoice() {
-    let rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    rec.lang = "en-US";
-    rec.start();
+/* IMAGE UPLOAD */
+async function upload() {
+    let form = new FormData();
+    form.append("file", fileData);
 
-    rec.onresult = e => {
-        document.getElementById("msg").value = e.results[0][0].transcript;
-    };
-}
+    let res = await fetch("/upload-image", {
+        method: "POST",
+        body: form
+    });
 
-/* READ */
-function read() {
-    let speech = new SpeechSynthesisUtterance(lastText);
-    window.speechSynthesis.speak(speech);
-}
-
-/* STOP */
-function stop() {
-    window.speechSynthesis.cancel();
+    let data = await res.json();
+    add(data.caption, "bot");
 }
 
 </script>
