@@ -57,7 +57,7 @@ async def upload_image(file: UploadFile = File(...)):
 async def chat(data: dict):
     msg = data["message"]
 
-    memories = search_memory(msg)
+    memories = search_memory(msg) if msg else []
     context = "\n".join(memories)
 
     response = client.responses.create(

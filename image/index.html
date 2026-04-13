@@ -6,7 +6,7 @@
 <style>
 body {
     margin: 0;
-    font-family: Arial;
+    font-family: system-ui;
     background: #0b1220;
     color: white;
     display: flex;
@@ -14,13 +14,13 @@ body {
 }
 
 .container {
-    width: 700px;
+    width: 750px;
     margin-top: 20px;
 }
 
 h1 {
     text-align: center;
-    font-size: 26px;
+    font-size: 24px;
 }
 
 .chat {
@@ -36,14 +36,37 @@ h1 {
     margin: 8px 0;
     border-radius: 10px;
     max-width: 80%;
+    white-space: pre-wrap;
 }
 
 .user { background: #374151; margin-left: auto; }
 .bot { background: #1d4ed8; }
 
+.inputBox {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+input {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+}
+
+button {
+    padding: 10px;
+    background: #3b82f6;
+    border: none;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
 .upload {
     border: 2px dashed #3b82f6;
-    padding: 15px;
+    padding: 12px;
     margin-top: 10px;
     text-align: center;
     border-radius: 10px;
@@ -52,23 +75,22 @@ h1 {
 .preview {
     width: 100%;
     margin-top: 10px;
-    display: none;
     border-radius: 10px;
+    display: none;
 }
 
-button {
-    padding: 10px;
-    margin: 5px;
-    background: #3b82f6;
-    border: none;
-    color: white;
-    border-radius: 8px;
+.loader {
+    border: 3px solid #444;
+    border-top: 3px solid #3b82f6;
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 10px auto;
 }
 
-video {
-    width: 100%;
-    display: none;
-    border-radius: 10px;
+@keyframes spin {
+    100% { transform: rotate(360deg); }
 }
 </style>
 </head>
@@ -81,8 +103,10 @@ video {
 
 <div class="chat" id="chat"></div>
 
-<input type="text" id="msg" placeholder="Ask something..." style="width:100%; padding:10px;">
-<button onclick="sendMsg()">Send</button>
+<div class="inputBox">
+    <input id="msg" placeholder="Ask something..." />
+    <button onclick="sendMsg()">Send</button>
+</div>
 
 <div class="upload" onclick="file.click()">
 Upload / Drag Image
@@ -98,7 +122,7 @@ Upload / Drag Image
 <button onclick="openCam()">📸 Camera</button>
 <button onclick="capture()">📷 Capture</button>
 
-<video id="video"></video>
+<video id="video" style="width:100%; display:none;"></video>
 <canvas id="canvas" style="display:none;"></canvas>
 
 </div>
@@ -119,13 +143,31 @@ file.onchange = e => {
     preview.style.display = "block";
 };
 
+/* CHAT UI */
 function add(text, type) {
     let div = document.createElement("div");
     div.className = "msg " + type;
     div.innerText = text;
     chat.appendChild(div);
     chat.scrollTop = chat.scrollHeight;
+
     if(type === "bot") lastText = text;
+}
+
+/* STREAMING EFFECT (ChatGPT style) */
+function stream(text) {
+    let div = document.createElement("div");
+    div.className = "msg bot";
+    chat.appendChild(div);
+
+    let i = 0;
+    let interval = setInterval(() => {
+        div.innerText += text[i];
+        i++;
+        if(i >= text.length) clearInterval(interval);
+    }, 15);
+
+    lastText = text;
 }
 
 /* CHAT */
@@ -144,24 +186,14 @@ async function sendMsg() {
     stream(data.reply);
 }
 
-/* STREAM EFFECT */
-function stream(text) {
-    let div = document.createElement("div");
-    div.className = "msg bot";
-    chat.appendChild(div);
-
-    let i = 0;
-    let interval = setInterval(() => {
-        div.innerText += text[i];
-        i++;
-        if(i >= text.length) clearInterval(interval);
-    }, 15);
-
-    lastText = text;
-}
-
-/* IMAGE UPLOAD */
+/* IMAGE */
 async function upload() {
+    if(!fileData) return alert("Select image first");
+
+    let loader = document.createElement("div");
+    loader.className = "loader";
+    chat.appendChild(loader);
+
     let form = new FormData();
     form.append("file", fileData);
 
@@ -171,6 +203,8 @@ async function upload() {
     });
 
     let data = await res.json();
+
+    loader.remove();
     stream(data.caption);
 }
 
@@ -181,7 +215,8 @@ function startVoice() {
     rec.start();
 
     rec.onresult = e => {
-        add(e.results[0][0].transcript, "user");
+        let text = e.results[0][0].transcript;
+        add(text, "user");
     };
 }
 
