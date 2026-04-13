@@ -1,30 +1,28 @@
-import bcrypt
+# users.py
 
-users_db = {}
+# TEMP DATABASE (you can later replace with MySQL/PostgreSQL)
+USERS_DB = {
+    "admin": {
+        "username": "admin",
+        "password": "admin123"
+    },
+    "ankita": {
+        "username": "ankita",
+        "password": "12345"
+    }
+}
 
-def hash_password(password: str):
-    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
-def verify_password(password: str, hashed: str):
-    return bcrypt.checkpw(password.encode(), hashed.encode())
+def get_user(username: str):
+    return USERS_DB.get(username)
+
 
 def create_user(username: str, password: str):
-    if username in users_db:
-        return None
+    if username in USERS_DB:
+        return False
 
-    users_db[username] = {
+    USERS_DB[username] = {
         "username": username,
-        "password": hash_password(password)
+        "password": password
     }
-    return users_db[username]
-
-def authenticate_user(username: str, password: str):
-    user = users_db.get(username)
-
-    if not user:
-        return None
-
-    if verify_password(password, user["password"]):
-        return user
-
-    return None
+    return True

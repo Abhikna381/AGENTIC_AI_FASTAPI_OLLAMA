@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>ANKITA'S AKSHAT AI</title>
+<title>ANKITA'S AKSHAT AI IMAGE CAPTION CHATBOT</title>
 
 <style>
 body {
@@ -14,40 +14,123 @@ body {
 }
 
 .container {
-    width: 700px;
+    width: 750px;
     margin-top: 20px;
 }
 
 h1 {
     text-align: center;
+    font-size: 24px;
 }
 
+/* LOGIN BOX */
+.login-box {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+input {
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    width: 100%;
+}
+
+/* CHAT */
 .chat {
-    height: 400px;
+    height: 420px;
     overflow-y: auto;
     background: #111827;
-    padding: 10px;
-    border-radius: 10px;
+    padding: 15px;
+    border-radius: 12px;
 }
 
 .msg {
     padding: 10px;
-    margin: 5px;
-    border-radius: 8px;
+    margin: 6px 0;
+    border-radius: 10px;
+    max-width: 80%;
 }
 
-.user { background: #374151; margin-left: auto; }
-.bot { background: #1d4ed8; }
+.user {
+    background: #374151;
+    margin-left: auto;
+}
 
-input, button {
-    padding: 10px;
-    margin: 5px;
+.bot {
+    background: #1d4ed8;
+}
+
+/* UPLOAD */
+.upload {
+    border: 2px dashed #3b82f6;
+    padding: 15px;
+    margin-top: 10px;
+    text-align: center;
+    cursor: pointer;
+    border-radius: 10px;
+}
+
+.upload:hover {
+    background: #1e293b;
 }
 
 .preview {
     width: 100%;
-    display: none;
     margin-top: 10px;
+    display: none;
+    border-radius: 10px;
+}
+
+/* BUTTONS */
+button {
+    padding: 10px;
+    margin: 5px 2px;
+    background: #3b82f6;
+    border: none;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #2563eb;
+}
+
+/* LOADING DOTS */
+.typing {
+    display: inline-block;
+}
+
+.typing span {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin: 0 2px;
+    background: white;
+    border-radius: 50%;
+    animation: blink 1.4s infinite both;
+}
+
+.typing span:nth-child(2) {
+    animation-delay: .2s;
+}
+
+.typing span:nth-child(3) {
+    animation-delay: .4s;
+}
+
+@keyframes blink {
+    0% { opacity: .2; }
+    20% { opacity: 1; }
+    100% { opacity: .2; }
+}
+
+video {
+    width: 100%;
+    display: none;
+    border-radius: 10px;
 }
 </style>
 </head>
@@ -56,110 +139,155 @@ input, button {
 
 <div class="container">
 
-<h1>🤖 ANKITA'S AKSHAT AI</h1>
-
-<!-- REGISTER -->
-<h3>Register</h3>
-<input id="ruser" placeholder="username">
-<input id="rpass" type="password" placeholder="password">
-<button onclick="register()">Register</button>
+<h1>🤖 ANKITA'S AKSHAT AI IMAGE CAPTION CHATBOT</h1>
 
 <!-- LOGIN -->
-<h3>Login</h3>
-<input id="luser" placeholder="username">
-<input id="lpass" type="password" placeholder="password">
-<button onclick="login()">Login</button>
+<div class="login-box">
+    <input id="username" placeholder="Username">
+    <input id="password" type="password" placeholder="Password">
+    <button onclick="login()">Login</button>
+</div>
 
+<!-- CHAT -->
 <div class="chat" id="chat"></div>
 
-<input id="msg" placeholder="Ask something..." style="width:100%">
-<button onclick="send()">Send</button>
+<input id="msg" placeholder="Ask something...">
+<button onclick="sendMsg()">Send</button>
 
-<!-- IMAGE -->
-<input type="file" id="file">
-<img id="preview" class="preview">
-<button onclick="upload()">Upload Image</button>
+<!-- UPLOAD -->
+<div class="upload" onclick="file.click()">
+    Drag & Drop OR Click to Upload Image
+    <input type="file" id="file" hidden>
+    <img id="preview" class="preview">
+</div>
+
+<button onclick="uploadImage()">Generate Caption</button>
+<button onclick="startVoice()">🎤 Voice</button>
+<button onclick="readText()">🔊 Read</button>
+<button onclick="stopSpeech()">⏹ Stop</button>
+
+<video id="video"></video>
 
 </div>
 
 <script>
 
-let token = "";
+let fileData = null;
+let chat = document.getElementById("chat");
+let file = document.getElementById("file");
+let preview = document.getElementById("preview");
+let lastText = "";
+let speech;
 
-function add(text, type){
-    let div = document.createElement("div");
-    div.className = "msg " + type;
-    div.innerText = text;
-    document.getElementById("chat").appendChild(div);
-}
-
-/* REGISTER */
-async function register(){
-    let res = await fetch("/register", {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({
-            username: ruser.value,
-            password: rpass.value
-        })
-    });
-
-    let data = await res.json();
-    alert(data.message || data.detail);
-}
-
-/* LOGIN */
+// ---------------- LOGIN ----------------
 async function login(){
+    let username = document.getElementById("username").value;
+    let password = document.getElementById("password").value;
+
+    let form = new FormData();
+    form.append("username", username);
+    form.append("password", password);
+
     let res = await fetch("/login", {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({
-            username: luser.value,
-            password: lpass.value
-        })
+        method: "POST",
+        body: form
     });
 
     let data = await res.json();
-    token = data.access_token;
-    alert("Logged in!");
+
+    if(data.access_token){
+        localStorage.setItem("token", data.access_token);
+        alert("Login successful!");
+    } else {
+        alert("Login failed");
+    }
 }
 
-/* CHAT */
-async function send(){
+// ---------------- CHAT ----------------
+async function sendMsg(){
     let msg = document.getElementById("msg").value;
 
-    add(msg,"user");
+    addMsg(msg, "user");
+
+    let token = localStorage.getItem("token");
 
     let res = await fetch("/chat", {
-        method:"POST",
-        headers:{
-            "Content-Type":"application/json",
-            "Authorization":"Bearer " + token
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
         },
         body: JSON.stringify({message: msg})
     });
 
     let data = await res.json();
-    add(data.reply,"bot");
+
+    typeEffect(data.reply);
 }
 
-/* IMAGE */
-file.onchange = e=>{
-    preview.src = URL.createObjectURL(file.files[0]);
-    preview.style.display="block";
+// ---------------- STREAM TYPE EFFECT ----------------
+function typeEffect(text){
+    let div = document.createElement("div");
+    div.className = "msg bot";
+    chat.appendChild(div);
+
+    let i = 0;
+    let interval = setInterval(() => {
+        div.innerText += text[i];
+        i++;
+        if(i >= text.length) clearInterval(interval);
+    }, 20);
+
+    lastText = text;
 }
 
-async function upload(){
+// ---------------- ADD MESSAGE ----------------
+function addMsg(text, type){
+    let div = document.createElement("div");
+    div.className = "msg " + type;
+    div.innerText = text;
+    chat.appendChild(div);
+}
+
+// ---------------- IMAGE UPLOAD ----------------
+file.onchange = e => {
+    fileData = e.target.files[0];
+    preview.src = URL.createObjectURL(fileData);
+    preview.style.display = "block";
+};
+
+async function uploadImage(){
     let form = new FormData();
-    form.append("file", file.files[0]);
+    form.append("file", fileData);
 
     let res = await fetch("/upload-image", {
-        method:"POST",
+        method: "POST",
         body: form
     });
 
     let data = await res.json();
-    add(data.caption,"bot");
+    typeEffect(data.caption);
+}
+
+// ---------------- VOICE ----------------
+function startVoice(){
+    const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    rec.lang = "en-US";
+    rec.start();
+
+    rec.onresult = e => {
+        addMsg(e.results[0][0].transcript, "user");
+    };
+}
+
+// ---------------- SPEECH ----------------
+function readText(){
+    speech = new SpeechSynthesisUtterance(lastText);
+    window.speechSynthesis.speak(speech);
+}
+
+function stopSpeech(){
+    window.speechSynthesis.cancel();
 }
 
 </script>

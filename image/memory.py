@@ -15,13 +15,15 @@ def embed(text):
     )
     return np.array(res.data[0].embedding, dtype="float32")
 
+
 def add_memory(text):
     vec = embed(text)
     index.add(np.array([vec]))
     memory_store.append(text)
 
+
 def search_memory(query, k=3):
-    if not memory_store:
+    if len(memory_store) == 0:
         return []
 
     q = embed(query)
