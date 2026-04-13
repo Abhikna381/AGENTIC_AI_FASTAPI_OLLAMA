@@ -3,6 +3,9 @@
 <head>
     <title>AI Image Caption</title>
 
+    <!-- ✅ Favicon -->
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+
     <style>
         body {
             margin: 0;
@@ -20,21 +23,19 @@
 
         h1 {
             text-align: center;
-            margin-bottom: 20px;
         }
 
-        /* Chat Box */
         .chat-box {
             background: #1e293b;
             padding: 20px;
             border-radius: 12px;
             min-height: 350px;
-            margin-bottom: 15px;
             overflow-y: auto;
+            margin-bottom: 15px;
         }
 
         .message {
-            margin-bottom: 15px;
+            margin-bottom: 10px;
             padding: 10px;
             border-radius: 10px;
             max-width: 80%;
@@ -42,17 +43,13 @@
 
         .user {
             background: #334155;
-            text-align: right;
             margin-left: auto;
         }
 
         .bot {
             background: #0ea5e9;
-            text-align: left;
-            color: white;
         }
 
-        /* Upload Box */
         .upload-box {
             border: 2px dashed #38bdf8;
             padding: 20px;
@@ -70,7 +67,6 @@
             display: none;
         }
 
-        /* Buttons */
         .controls {
             display: flex;
             gap: 10px;
@@ -83,14 +79,12 @@
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            font-weight: bold;
         }
 
         button:hover {
             background: #0ea5e9;
         }
 
-        /* Loader */
         .loader {
             border: 4px solid #f3f3f3;
             border-top: 4px solid #38bdf8;
@@ -98,7 +92,7 @@
             width: 30px;
             height: 30px;
             animation: spin 1s linear infinite;
-            margin: 10px auto;
+            margin: auto;
         }
 
         @keyframes spin {
@@ -107,8 +101,8 @@
 
         img.preview {
             max-width: 100%;
-            border-radius: 10px;
             margin-top: 10px;
+            border-radius: 10px;
         }
     </style>
 </head>
@@ -127,7 +121,9 @@
 
     <div class="controls">
         <button onclick="startVoice()">🎤 Speak</button>
-        <button onclick="uploadImage()">Generate Caption</button>
+        <button onclick="stopVoice()">⛔ Stop</button>
+        <button onclick="readLastMessage()">🔊 Read</button>
+        <button onclick="uploadImage()">Generate</button>
     </div>
 </div>
 
@@ -137,69 +133,29 @@
     const chatBox = document.getElementById("chatBox");
 
     let selectedFile = null;
+    let recognition;
 
-    // Click upload
     uploadBox.onclick = () => fileInput.click();
 
     fileInput.onchange = (e) => {
         selectedFile = e.target.files[0];
         addMessage("🖼 Image selected", "user");
-
-        showPreview(selectedFile);
+        previewImage(selectedFile);
     };
-
-    // Drag & Drop
-    uploadBox.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        uploadBox.classList.add("dragover");
-    });
-
-    uploadBox.addEventListener("dragleave", () => {
-        uploadBox.classList.remove("dragover");
-    });
 
     uploadBox.addEventListener("drop", (e) => {
         e.preventDefault();
-        uploadBox.classList.remove("dragover");
-
         selectedFile = e.dataTransfer.files[0];
         addMessage("🖼 Image dropped", "user");
-
-        showPreview(selectedFile);
+        previewImage(selectedFile);
     });
 
-    // Show image preview
-    function showPreview(file) {
+    function previewImage(file) {
         const reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = (e) => {
             addMessage(`<img src="${e.target.result}" class="preview">`, "user");
         };
         reader.readAsDataURL(file);
-    }
-
-    // Voice Input
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    function startVoice() {
-        if (!SpeechRecognition) {
-            alert("Voice not supported in this browser");
-            return;
-        }
-
-        const recognition = new SpeechRecognition();
-        recognition.lang = "en-US";
-        recognition.start();
-
-        addMessage("🎤 Listening...", "bot");
-
-        recognition.onresult = function(event) {
-            const text = event.results[0][0].transcript;
-            addMessage(text, "user");
-        };
-
-        recognition.onerror = function() {
-            addMessage("❌ Voice error", "bot");
-        };
     }
 
     function addMessage(text, type) {
@@ -210,9 +166,46 @@
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
+    // 🎤 Voice
+    function startVoice() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        if (!SpeechRecognition) {
+            alert("Voice not supported");
+            return;
+        }
+
+        recognition = new SpeechRecognition();
+        recognition.start();
+
+        addMessage("🎤 Listening...", "bot");
+
+        recognition.onresult = (event) => {
+            const text = event.results[0][0].transcript;
+            addMessage(text, "user");
+        };
+    }
+
+    function stopVoice() {
+        if (recognition) {
+            recognition.stop();
+            addMessage("🛑 Stopped", "bot");
+        }
+    }
+
+    // 🔊 Read
+    function readLastMessage() {
+        const msgs = document.querySelectorAll(".bot");
+        if (msgs.length === 0) return;
+
+        const text = msgs[msgs.length - 1].innerText;
+        speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+    }
+
+    // 🚀 Upload
     async function uploadImage() {
         if (!selectedFile) {
-            alert("Please select an image first!");
+            alert("Select image first");
             return;
         }
 
@@ -225,22 +218,18 @@
         const formData = new FormData();
         formData.append("file", selectedFile);
 
-        try {
-            const response = await fetch("/upload-image", {
-                method: "POST",
-                body: formData
-            });
+        const res = await fetch("/upload-image", {
+            method: "POST",
+            body: formData
+        });
 
-            const data = await response.json();
+        const data = await res.json();
+        loader.remove();
 
-            loader.remove();
+        addMessage(`<pre>${data.caption}</pre>`, "bot");
 
-            addMessage(`<pre>${data.caption}</pre>`, "bot");
-
-        } catch (error) {
-            loader.remove();
-            addMessage("❌ Error occurred", "bot");
-        }
+        // 🔊 Auto speak
+        speechSynthesis.speak(new SpeechSynthesisUtterance(data.caption));
     }
 </script>
 
