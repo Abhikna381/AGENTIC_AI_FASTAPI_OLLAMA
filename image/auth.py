@@ -1,46 +1,30 @@
 from datetime import datetime, timedelta
-from jose import JWTError, jwt
-from passlib.context import CryptContext
+import jwt
 
-# 🔑 CONFIG
-SECRET_KEY = "super_secret_key_change_this"
+SECRET_KEY = "mysecretkey123"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-# 🧑 FAKE USER DB (replace with real DB later)
-fake_users_db = {
-    "admin": {
-        "username": "admin",
-        "hashed_password": pwd_context.hash("admin123")
-    }
+# demo user (replace with DB later)
+USERS = {
+    "admin": "admin123"
 }
 
-# 🔐 PASSWORD CHECK
-def verify_password(plain, hashed):
-    return pwd_context.verify(plain, hashed)
-
 def authenticate_user(username, password):
-    user = fake_users_db.get(username)
-    if not user:
-        return False
-    if not verify_password(password, user["hashed_password"]):
-        return False
-    return user
+    if username in USERS and USERS[username] == password:
+        return {"username": username}
+    return None
 
-# 🎟 CREATE TOKEN
-def create_access_token(data: dict, expires_delta=None):
+
+def create_access_token(data: dict, expires_minutes=60):
     to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    expire = datetime.utcnow() + timedelta(minutes=expires_minutes)
     to_encode.update({"exp": expire})
-
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-# 🔍 VERIFY TOKEN
+
 def decode_token(token: str):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload.get("sub")
-    except JWTError:
+    except:
         return None

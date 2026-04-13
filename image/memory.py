@@ -13,23 +13,20 @@ def embed(text):
         model="text-embedding-3-small",
         input=text
     )
+    return np.array(res.data[0].embedding, dtype="float32")
 
-    vec = np.array(res.data[0].embedding, dtype="float32")
-    vec = vec / np.linalg.norm(vec)
-    return vec
 
 def add_memory(text):
     vec = embed(text)
     index.add(np.array([vec]))
     memory_store.append(text)
 
+
 def search_memory(query, k=3):
-    if index.ntotal == 0:
+    if not memory_store:
         return []
 
     q = embed(query)
-    q = np.array([q])
-
-    D, I = index.search(q, k)
+    D, I = index.search(np.array([q]), k)
 
     return [memory_store[i] for i in I[0] if i < len(memory_store)]

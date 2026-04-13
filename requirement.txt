@@ -1,9 +1,8 @@
 fastapi
 uvicorn
-python-multipart
 openai
 python-dotenv
 faiss-cpu
 numpy
-python-jose
-passlib[bcrypt]
+python-multipart
+PyJWT
