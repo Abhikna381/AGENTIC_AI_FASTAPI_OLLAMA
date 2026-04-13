@@ -1,30 +1,31 @@
-from datetime import datetime, timedelta
 import jwt
+import datetime
 
-SECRET_KEY = "mysecretkey123"
-ALGORITHM = "HS256"
+SECRET = "mysecretkey"
 
-# demo user (replace with DB later)
-USERS = {
-    "admin": "admin123"
+# fake users
+users = {
+    "admin": "1234",
+    "user": "1234"
 }
 
 def authenticate_user(username, password):
-    if username in USERS and USERS[username] == password:
+    if username in users and users[username] == password:
         return {"username": username}
     return None
 
 
-def create_access_token(data: dict, expires_minutes=60):
-    to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=expires_minutes)
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+def create_access_token(data: dict):
+    payload = {
+        "sub": data["sub"],
+        "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=2)
+    }
+    return jwt.encode(payload, SECRET, algorithm="HS256")
 
 
 def decode_token(token: str):
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload.get("sub")
+        payload = jwt.decode(token, SECRET, algorithms=["HS256"])
+        return payload["sub"]
     except:
         return None

@@ -3,11 +3,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from openai import OpenAI
+from dotenv import load_dotenv
 import base64
 import os
 
 from auth import authenticate_user, create_access_token, decode_token
 from memory import add_memory, search_memory
+
+load_dotenv()
 
 app = FastAPI()
 client = OpenAI()
@@ -16,7 +19,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 BASE_DIR = os.path.dirname(__file__)
 
-# ---------------- CORS ----------------
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -24,7 +27,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ---------------- UI ----------------
+# UI
 @app.get("/")
 def home():
     return FileResponse(os.path.join(BASE_DIR, "index.html"))
@@ -33,7 +36,7 @@ def home():
 def favicon():
     return FileResponse(os.path.join(BASE_DIR, "favicon.ico"))
 
-# ---------------- LOGIN ----------------
+# LOGIN
 @app.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends()):
     user = authenticate_user(form_data.username, form_data.password)
@@ -42,16 +45,11 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     token = create_access_token({"sub": user["username"]})
+    return {"access_token": token, "token_type": "bearer"}
 
-    return {
-        "access_token": token,
-        "token_type": "bearer"
-    }
-
-# ---------------- CHAT (RAG + JWT) ----------------
+# CHAT (RAG + JWT)
 @app.post("/chat")
 def chat(data: dict, token: str = Depends(oauth2_scheme)):
-
     username = decode_token(token)
 
     if not username:
@@ -84,10 +82,9 @@ Message:
 
     return {"reply": reply}
 
-# ---------------- IMAGE CAPTION ----------------
+# IMAGE CAPTION
 @app.post("/upload-image")
 async def upload_image(file: UploadFile = File(...)):
-
     img = await file.read()
     b64 = base64.b64encode(img).decode()
 
