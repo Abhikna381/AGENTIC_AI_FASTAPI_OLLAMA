@@ -20,55 +20,34 @@ body {
 
 h1 {
     text-align: center;
-    font-size: 26px;
 }
 
 .chat {
-    height: 420px;
+    height: 400px;
     overflow-y: auto;
     background: #111827;
-    padding: 15px;
-    border-radius: 12px;
+    padding: 10px;
+    border-radius: 10px;
 }
 
 .msg {
     padding: 10px;
-    margin: 8px 0;
-    border-radius: 10px;
-    max-width: 80%;
+    margin: 5px;
+    border-radius: 8px;
 }
 
 .user { background: #374151; margin-left: auto; }
 .bot { background: #1d4ed8; }
 
-.upload {
-    border: 2px dashed #3b82f6;
-    padding: 15px;
-    margin-top: 10px;
-    text-align: center;
-    border-radius: 10px;
+input, button {
+    padding: 10px;
+    margin: 5px;
 }
 
 .preview {
     width: 100%;
+    display: none;
     margin-top: 10px;
-    display: none;
-    border-radius: 10px;
-}
-
-button {
-    padding: 10px;
-    margin: 5px;
-    background: #3b82f6;
-    border: none;
-    color: white;
-    border-radius: 8px;
-}
-
-video {
-    width: 100%;
-    display: none;
-    border-radius: 10px;
 }
 </style>
 </head>
@@ -79,97 +58,108 @@ video {
 
 <h1>🤖 ANKITA'S AKSHAT AI</h1>
 
+<!-- REGISTER -->
+<h3>Register</h3>
+<input id="ruser" placeholder="username">
+<input id="rpass" type="password" placeholder="password">
+<button onclick="register()">Register</button>
+
 <!-- LOGIN -->
-<input id="user" placeholder="username">
-<input id="pass" placeholder="password" type="password">
+<h3>Login</h3>
+<input id="luser" placeholder="username">
+<input id="lpass" type="password" placeholder="password">
 <button onclick="login()">Login</button>
 
 <div class="chat" id="chat"></div>
 
-<input type="text" id="msg" placeholder="Ask something..." style="width:100%; padding:10px;">
-<button onclick="sendMsg()">Send</button>
+<input id="msg" placeholder="Ask something..." style="width:100%">
+<button onclick="send()">Send</button>
 
 <!-- IMAGE -->
-<div class="upload" onclick="file.click()">
-Upload / Drag Image
-<input type="file" id="file" hidden>
+<input type="file" id="file">
 <img id="preview" class="preview">
-</div>
-
-<button onclick="upload()">Generate Caption</button>
-
-<video id="video"></video>
-<canvas id="canvas" style="display:none;"></canvas>
+<button onclick="upload()">Upload Image</button>
 
 </div>
 
 <script>
 
-let fileData = null;
 let token = "";
-let lastText = "";
 
-const chat = document.getElementById("chat");
-const file = document.getElementById("file");
-const preview = document.getElementById("preview");
-
-file.onchange = e => {
-    fileData = e.target.files[0];
-    preview.src = URL.createObjectURL(fileData);
-    preview.style.display = "block";
-};
-
-function add(text, type) {
+function add(text, type){
     let div = document.createElement("div");
     div.className = "msg " + type;
     div.innerText = text;
-    chat.appendChild(div);
-    chat.scrollTop = chat.scrollHeight;
+    document.getElementById("chat").appendChild(div);
+}
+
+/* REGISTER */
+async function register(){
+    let res = await fetch("/register", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({
+            username: ruser.value,
+            password: rpass.value
+        })
+    });
+
+    let data = await res.json();
+    alert(data.message || data.detail);
 }
 
 /* LOGIN */
-async function login() {
-    let form = new FormData();
-    form.append("username", document.getElementById("user").value);
-    form.append("password", document.getElementById("pass").value);
+async function login(){
+    let res = await fetch("/login", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({
+            username: luser.value,
+            password: lpass.value
+        })
+    });
 
-    let res = await fetch("/login", { method:"POST", body: form });
     let data = await res.json();
-
     token = data.access_token;
     alert("Logged in!");
 }
 
 /* CHAT */
-async function sendMsg() {
+async function send(){
     let msg = document.getElementById("msg").value;
-    add(msg, "user");
+
+    add(msg,"user");
 
     let res = await fetch("/chat", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + token
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json",
+            "Authorization":"Bearer " + token
         },
         body: JSON.stringify({message: msg})
     });
 
     let data = await res.json();
-    add(data.reply, "bot");
+    add(data.reply,"bot");
 }
 
-/* IMAGE UPLOAD */
-async function upload() {
+/* IMAGE */
+file.onchange = e=>{
+    preview.src = URL.createObjectURL(file.files[0]);
+    preview.style.display="block";
+}
+
+async function upload(){
     let form = new FormData();
-    form.append("file", fileData);
+    form.append("file", file.files[0]);
 
     let res = await fetch("/upload-image", {
-        method: "POST",
+        method:"POST",
         body: form
     });
 
     let data = await res.json();
-    add(data.caption, "bot");
+    add(data.caption,"bot");
 }
 
 </script>

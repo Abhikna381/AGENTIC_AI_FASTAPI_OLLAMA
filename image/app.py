@@ -1,16 +1,14 @@
 from fastapi import FastAPI, UploadFile, File, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordBearer
 from openai import OpenAI
-from dotenv import load_dotenv
 import base64
 import os
 
-from image.auth import authenticate_user, create_access_token, decode_token
+from image.auth import create_access_token, decode_token
+from image.users import create_user, authenticate_user
 from image.memory import add_memory, search_memory
-
-load_dotenv()
 
 app = FastAPI()
 client = OpenAI()
@@ -19,7 +17,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 BASE_DIR = os.path.dirname(__file__)
 
-# CORS
+# ---------------- CORS ----------------
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -27,7 +25,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# UI
+# ---------------- UI ----------------
 @app.get("/")
 def home():
     return FileResponse(os.path.join(BASE_DIR, "index.html"))
@@ -36,19 +34,28 @@ def home():
 def favicon():
     return FileResponse(os.path.join(BASE_DIR, "favicon.ico"))
 
+# ---------------- REGISTER ----------------
+@app.post("/register")
+def register(data: dict):
+    user = create_user(data["username"], data["password"])
+
+    if not user:
+        raise HTTPException(status_code=400, detail="User already exists")
+
+    return {"message": "User registered successfully"}
+
 # ---------------- LOGIN ----------------
 @app.post("/login")
-def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = authenticate_user(form_data.username, form_data.password)
+def login(data: dict):
+    user = authenticate_user(data["username"], data["password"])
 
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     token = create_access_token({"sub": user["username"]})
+    return {"access_token": token}
 
-    return {"access_token": token, "token_type": "bearer"}
-
-# ---------------- CHAT (RAG + JWT) ----------------
+# ---------------- CHAT (RAG) ----------------
 @app.post("/chat")
 def chat(data: dict, token: str = Depends(oauth2_scheme)):
     username = decode_token(token)
@@ -71,7 +78,7 @@ User: {username}
 Memory:
 {context}
 
-Message:
+Question:
 {msg}
 """
         }]
@@ -83,7 +90,7 @@ Message:
 
     return {"reply": reply}
 
-# ---------------- IMAGE CAPTION (FIXED FEATURE) ----------------
+# ---------------- IMAGE CAPTION ----------------
 @app.post("/upload-image")
 async def upload_image(file: UploadFile = File(...)):
     img = await file.read()
@@ -94,13 +101,14 @@ async def upload_image(file: UploadFile = File(...)):
         input=[{
             "role": "user",
             "content": [
-                {"type": "input_text", "text": "Describe this image in detail"},
+                {"type": "input_text", "text": "Describe this image"},
                 {"type": "input_image", "image_url": f"data:image/jpeg;base64,{b64}"}
             ]
         }]
     )
 
     caption = response.output[0].content[0].text
-    add_memory("Image caption: " + caption)
+
+    add_memory("image caption: " + caption)
 
     return {"caption": caption}

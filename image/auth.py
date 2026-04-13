@@ -1,17 +1,7 @@
 import jwt
 import datetime
 
-SECRET_KEY = "supersecret"
-
-fake_user = {
-    "username": "admin",
-    "password": "admin"
-}
-
-def authenticate_user(username, password):
-    if username == fake_user["username"] and password == fake_user["password"]:
-        return fake_user
-    return None
+SECRET_KEY = "supersecretkey123"
 
 def create_access_token(data: dict):
     payload = data.copy()
