@@ -1,329 +1,225 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>ANKITA'S AKSHAT AI IMAGE CAPTION</title>
+<title>ANKITA'S AKSHAT AI</title>
 
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background: #0f172a;
-            color: white;
-            display: flex;
-            justify-content: center;
-        }
+<style>
+body {
+    margin: 0;
+    font-family: Arial;
+    background: #0b1220;
+    color: white;
+    display: flex;
+    justify-content: center;
+}
 
-        .container {
-            width: 650px;
-            margin-top: 40px;
-        }
+.container {
+    width: 700px;
+    margin-top: 20px;
+}
 
-        h1 {
-            text-align: center;
-            margin-bottom: 20px;
-            font-size: 22px;
-            font-weight: bold;
-            color: #38bdf8;
-        }
+h1 {
+    text-align: center;
+    font-size: 26px;
+}
 
-        .chat-box {
-            background: #1e293b;
-            padding: 20px;
-            border-radius: 12px;
-            min-height: 250px;
-            max-height: 350px;
-            overflow-y: auto;
-            margin-bottom: 20px;
-        }
+.chat {
+    height: 420px;
+    overflow-y: auto;
+    background: #111827;
+    padding: 15px;
+    border-radius: 12px;
+}
 
-        .message {
-            margin-bottom: 10px;
-            padding: 10px;
-            border-radius: 8px;
-            max-width: 80%;
-            word-wrap: break-word;
-        }
+.msg {
+    padding: 10px;
+    margin: 8px 0;
+    border-radius: 10px;
+    max-width: 80%;
+}
 
-        .user {
-            background: #334155;
-            margin-left: auto;
-            text-align: right;
-        }
+.user { background: #374151; margin-left: auto; }
+.bot { background: #1d4ed8; }
 
-        .bot {
-            background: #1e40af;
-            text-align: left;
-        }
+.upload {
+    border: 2px dashed #3b82f6;
+    padding: 15px;
+    margin-top: 10px;
+    text-align: center;
+    border-radius: 10px;
+}
 
-        .upload-box {
-            border: 2px dashed #38bdf8;
-            padding: 20px;
-            text-align: center;
-            border-radius: 10px;
-            cursor: pointer;
-        }
+.preview {
+    width: 100%;
+    margin-top: 10px;
+    display: none;
+    border-radius: 10px;
+}
 
-        .upload-box:hover {
-            background: #1e40af;
-        }
+button {
+    padding: 10px;
+    margin: 5px;
+    background: #3b82f6;
+    border: none;
+    color: white;
+    border-radius: 8px;
+}
 
-        input {
-            display: none;
-        }
-
-        .preview img {
-            width: 100%;
-            margin-top: 10px;
-            border-radius: 10px;
-            border: 2px solid #38bdf8;
-        }
-
-        .btn-row {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin-top: 10px;
-        }
-
-        button {
-            padding: 10px 15px;
-            background: #38bdf8;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        button:hover {
-            background: #0ea5e9;
-        }
-
-        /* Loader */
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #38bdf8;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            margin: auto;
-        }
-
-        @keyframes spin {
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Typing dots */
-        .typing {
-            display: inline-flex;
-            gap: 4px;
-        }
-
-        .dot {
-            width: 6px;
-            height: 6px;
-            background: #38bdf8;
-            border-radius: 50%;
-            animation: bounce 1.4s infinite ease-in-out;
-        }
-
-        .dot:nth-child(2) { animation-delay: 0.2s; }
-        .dot:nth-child(3) { animation-delay: 0.4s; }
-
-        @keyframes bounce {
-            0%, 80%, 100% { transform: scale(0); opacity: 0.3; }
-            40% { transform: scale(1); opacity: 1; }
-        }
-    </style>
+video {
+    width: 100%;
+    display: none;
+    border-radius: 10px;
+}
+</style>
 </head>
 
 <body>
 
 <div class="container">
 
-    <h1>🤖 ANKITA'S AKSHAT AI IMAGE CAPTION</h1>
+<h1>🤖 ANKITA'S AKSHAT AI</h1>
 
-    <div class="chat-box" id="chatBox"></div>
+<div class="chat" id="chat"></div>
 
-    <!-- Upload -->
-    <div class="upload-box" id="uploadBox">
-        Drag & Drop Image OR Click to Upload
-        <input type="file" id="fileInput" accept="image/*">
-        <div class="preview" id="preview"></div>
-    </div>
+<input type="text" id="msg" placeholder="Ask something..." style="width:100%; padding:10px;">
+<button onclick="sendMsg()">Send</button>
 
-    <!-- Buttons -->
-    <div class="btn-row">
-        <button onclick="uploadImage()">Generate Caption</button>
-        <button onclick="startVoice()">🎤 Speak</button>
-    </div>
+<div class="upload" onclick="file.click()">
+Upload / Drag Image
+<input type="file" id="file" hidden>
+<img id="preview" class="preview">
+</div>
 
-    <div class="btn-row">
-        <button onclick="readCaption()">🔊 Read</button>
-        <button onclick="stopReading()">⏹️ Stop</button>
-    </div>
+<button onclick="upload()">Generate Caption</button>
+<button onclick="startVoice()">🎤 Voice</button>
+<button onclick="read()">🔊 Read</button>
+<button onclick="stop()">⏹ Stop</button>
+
+<button onclick="openCam()">📸 Camera</button>
+<button onclick="capture()">📷 Capture</button>
+
+<video id="video"></video>
+<canvas id="canvas" style="display:none;"></canvas>
 
 </div>
 
 <script>
 
-const uploadBox = document.getElementById("uploadBox");
-const fileInput = document.getElementById("fileInput");
-const chatBox = document.getElementById("chatBox");
+let fileData = null;
+let lastText = "";
+let speech;
+
+const chat = document.getElementById("chat");
+const file = document.getElementById("file");
 const preview = document.getElementById("preview");
 
-let selectedFile = null;
-let currentCaption = "";
-let speech = null;
-
-/* ================= UPLOAD ================= */
-uploadBox.onclick = () => fileInput.click();
-
-fileInput.onchange = (e) => {
-    selectedFile = e.target.files[0];
-    showPreview(selectedFile);
-    addMessage("🖼 Image selected", "user");
+file.onchange = e => {
+    fileData = e.target.files[0];
+    preview.src = URL.createObjectURL(fileData);
+    preview.style.display = "block";
 };
 
-uploadBox.addEventListener("dragover", (e) => {
-    e.preventDefault();
-});
-
-uploadBox.addEventListener("drop", (e) => {
-    e.preventDefault();
-    selectedFile = e.dataTransfer.files[0];
-    showPreview(selectedFile);
-    addMessage("🖼 Image dropped", "user");
-});
-
-/* ================= PREVIEW ================= */
-function showPreview(file) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        preview.innerHTML = `<img src="${e.target.result}">`;
-    };
-    reader.readAsDataURL(file);
-}
-
-/* ================= CHAT ================= */
-function addMessage(text, type) {
-    const div = document.createElement("div");
-    div.className = "message " + type;
+function add(text, type) {
+    let div = document.createElement("div");
+    div.className = "msg " + type;
     div.innerText = text;
-
-    chatBox.appendChild(div);
-    chatBox.scrollTop = chatBox.scrollHeight;
-
-    if (type === "bot") currentCaption = text;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+    if(type === "bot") lastText = text;
 }
 
-/* ================= TYPING ANIMATION ================= */
-function showTyping() {
-    const div = document.createElement("div");
-    div.className = "message bot";
-    div.id = "typing";
+/* CHAT */
+async function sendMsg() {
+    let msg = document.getElementById("msg").value;
 
-    div.innerHTML = `
-        <div class="typing">
-            <div class="dot"></div>
-            <div class="dot"></div>
-            <div class="dot"></div>
-        </div>
-    `;
+    add(msg, "user");
 
-    chatBox.appendChild(div);
-    chatBox.scrollTop = chatBox.scrollHeight;
+    let res = await fetch("/chat", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({message: msg})
+    });
+
+    let data = await res.json();
+    stream(data.reply);
 }
 
-function removeTyping() {
-    const el = document.getElementById("typing");
-    if (el) el.remove();
-}
+/* STREAM EFFECT */
+function stream(text) {
+    let div = document.createElement("div");
+    div.className = "msg bot";
+    chat.appendChild(div);
 
-/* ================= STREAMING TEXT ================= */
-function streamText(text, element, speed = 25) {
     let i = 0;
-    element.innerHTML = "";
+    let interval = setInterval(() => {
+        div.innerText += text[i];
+        i++;
+        if(i >= text.length) clearInterval(interval);
+    }, 15);
 
-    function type() {
-        if (i < text.length) {
-            element.innerHTML += text.charAt(i);
-            i++;
-            chatBox.scrollTop = chatBox.scrollHeight;
-            setTimeout(type, speed);
-        }
-    }
-
-    type();
+    lastText = text;
 }
 
-/* ================= UPLOAD IMAGE ================= */
-async function uploadImage() {
-    if (!selectedFile) {
-        alert("Please select an image!");
-        return;
-    }
+/* IMAGE UPLOAD */
+async function upload() {
+    let form = new FormData();
+    form.append("file", fileData);
 
-    addMessage("📤 Uploading...", "user");
-    showTyping();
+    let res = await fetch("/upload-image", {
+        method: "POST",
+        body: form
+    });
 
-    const formData = new FormData();
-    formData.append("file", selectedFile);
-
-    try {
-        const res = await fetch("/upload-image", {
-            method: "POST",
-            body: formData
-        });
-
-        const data = await res.json();
-
-        removeTyping();
-
-        const div = document.createElement("div");
-        div.className = "message bot";
-        chatBox.appendChild(div);
-
-        currentCaption = data.caption;
-
-        streamText(data.caption, div, 20);
-
-    } catch (err) {
-        removeTyping();
-        addMessage("❌ Error occurred", "bot");
-    }
+    let data = await res.json();
+    stream(data.caption);
 }
 
-/* ================= VOICE ================= */
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
+/* VOICE */
 function startVoice() {
-    if (!SpeechRecognition) {
-        alert("Not supported");
-        return;
-    }
+    const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    rec.lang = "en-US";
+    rec.start();
 
-    const recognition = new SpeechRecognition();
-    recognition.lang = "en-US";
-    recognition.start();
-
-    addMessage("🎤 Listening...", "bot");
-
-    recognition.onresult = (e) => {
-        addMessage(e.results[0][0].transcript, "user");
+    rec.onresult = e => {
+        add(e.results[0][0].transcript, "user");
     };
 }
 
-/* ================= READ / STOP ================= */
-function readCaption() {
-    if (!currentCaption) return alert("No caption");
-
-    speech = new SpeechSynthesisUtterance(currentCaption);
+/* READ */
+function read() {
+    speech = new SpeechSynthesisUtterance(lastText);
     window.speechSynthesis.speak(speech);
 }
 
-function stopReading() {
+/* STOP */
+function stop() {
     window.speechSynthesis.cancel();
+}
+
+/* CAMERA */
+let video = document.getElementById("video");
+let streamObj;
+
+async function openCam() {
+    streamObj = await navigator.mediaDevices.getUserMedia({video:true});
+    video.srcObject = streamObj;
+    video.style.display = "block";
+    video.play();
+}
+
+function capture() {
+    let canvas = document.getElementById("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    let ctx = canvas.getContext("2d");
+    ctx.drawImage(video,0,0);
+
+    canvas.toBlob(blob => {
+        fileData = new File([blob],"cam.jpg",{type:"image/jpeg"});
+        preview.src = URL.createObjectURL(fileData);
+        preview.style.display = "block";
+    });
 }
 
 </script>
