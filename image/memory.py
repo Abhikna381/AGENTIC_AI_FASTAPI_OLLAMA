@@ -1,12 +1,16 @@
+# image/memory.py
+
 import faiss
 import numpy as np
 from openai import OpenAI
+import os
 
 client = OpenAI()
 
 DIM = 1536
 index = faiss.IndexFlatL2(DIM)
 memory_store = []
+
 
 def embed(text):
     res = client.embeddings.create(

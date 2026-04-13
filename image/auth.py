@@ -1,34 +1,30 @@
+# image/auth.py
+
 import jwt
-import datetime
-from users import get_user
+import os
+from datetime import datetime, timedelta
 
-SECRET_KEY = "mysecretkey"
-
+SECRET = os.getenv("JWT_SECRET", "secret")
 
 def authenticate_user(username, password):
+    from image.users import get_user
+
     user = get_user(username)
-
-    if not user:
-        return None
-
-    if user["password"] != password:
-        return None
-
-    return user
+    if user and user["password"] == password:
+        return user
+    return None
 
 
-def create_access_token(data):
-    payload = {
-        "sub": data["sub"],
-        "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=10)
-    }
+def create_access_token(data: dict):
+    payload = data.copy()
+    payload["exp"] = datetime.utcnow() + timedelta(hours=6)
 
-    return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+    return jwt.encode(payload, SECRET, algorithm="HS256")
 
 
-def decode_token(token):
+def decode_token(token: str):
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-        return payload["sub"]
+        payload = jwt.decode(token, SECRET, algorithms=["HS256"])
+        return payload.get("sub")
     except:
         return None

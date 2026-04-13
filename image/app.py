@@ -7,8 +7,9 @@ from dotenv import load_dotenv
 import base64
 import os
 
-from image.auth import authenticate_user, create_access_token, decode_token
 from image.memory import add_memory, search_memory
+from image.auth import authenticate_user, create_access_token, decode_token
+from image.users import create_user
 
 load_dotenv()
 
@@ -26,10 +27,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ---------------- UI ----------------
+# ---------------- HOME ----------------
 @app.get("/")
 def home():
     return FileResponse(os.path.join(BASE_DIR, "index.html"))
+
+# ---------------- REGISTER (NEW) ----------------
+@app.post("/register")
+def register(data: dict):
+    user = create_user(data["username"], data["password"])
+    if not user:
+        raise HTTPException(status_code=400, detail="User already exists")
+    return {"message": "User created"}
 
 # ---------------- LOGIN ----------------
 @app.post("/login")
@@ -42,7 +51,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
     token = create_access_token({"sub": user["username"]})
     return {"access_token": token, "token_type": "bearer"}
 
-# ---------------- CHAT ----------------
+# ---------------- CHAT (RAG + JWT) ----------------
 @app.post("/chat")
 def chat(data: dict, token: str = Depends(oauth2_scheme)):
     username = decode_token(token)
@@ -88,7 +97,7 @@ async def upload_image(file: UploadFile = File(...)):
         input=[{
             "role": "user",
             "content": [
-                {"type": "input_text", "text": "Generate caption"},
+                {"type": "input_text", "text": "Generate a caption for this image"},
                 {"type": "input_image", "image_url": f"data:image/jpeg;base64,{b64}"}
             ]
         }]
