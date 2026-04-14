@@ -5,7 +5,7 @@ import os
 from sqlalchemy import create_engine, Column, Integer, String, Text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-DATABASE_URL = os.getenv("MYSQL_URL")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 print("DEBUG DB URL:", DATABASE_URL)  # 👈 add this
 
