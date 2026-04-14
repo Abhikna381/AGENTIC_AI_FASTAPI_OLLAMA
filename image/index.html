@@ -18,7 +18,7 @@ body {
 .chat {
     height:420px;
     overflow-y:auto;
-    background:#111827;
+    background:#093896;
     padding:10px;
     border-radius:10px;
 }
@@ -57,7 +57,7 @@ input {
 
 <div class="container">
 
-<h2>🤖 ChatGPT AI</h2>
+<h2>🤖 ANKITA'S AKSHAT AI CAPTION GENERATOR</h2>
 
 <div id="loginBox">
     <input id="username" placeholder="Username">
@@ -151,6 +151,38 @@ async function login(){
 
     alert("✅ Login success");
     location.reload();
+}
+
+/* ✅ ADD HERE */
+async function register(){
+
+    let username = document.getElementById("username").value;
+    let password = document.getElementById("password").value;
+
+    if (!username || !password){
+        alert("Enter username & password");
+        return;
+    }
+
+    let res = await fetch("/register", {
+        method: "POST",
+        headers:{
+            "Content-Type":"application/json"
+        },
+        body: JSON.stringify({
+            username: username,
+            password: password
+        })
+    });
+
+    let data = await res.json();
+    console.log("REGISTER:", data);
+
+    if (data.message){
+        alert("✅ User registered! Now login");
+    } else {
+        alert("❌ Error: " + JSON.stringify(data));
+    }
 }
 
 /* CHAT */
