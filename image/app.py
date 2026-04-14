@@ -35,41 +35,46 @@ def home():
 
 # ---------- REGISTER ----------
 from image.database import SessionLocal, User
+from pydantic import BaseModel
+
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
 
 @app.post("/register")
-def register(data: dict):
+def register(data: RegisterRequest):
 
-    print("REGISTER API HIT:", data)   # 👈 ADD THIS
+    print("REGISTER HIT:", data)
 
     db = SessionLocal()
 
-    username = data.get("username")
-    password = data.get("password")
+    try:
+        # check existing
+        existing = db.query(User).filter(User.username == data.username).first()
 
-    print("USERNAME:", username)       # 👈 ADD
-    print("PASSWORD:", password)       # 👈 ADD
+        if existing:
+            raise HTTPException(status_code=400, detail="User already exists")
 
-    if not username or not password:
+        new_user = User(
+            username=data.username,
+            password=data.password
+        )
+
+        db.add(new_user)
+        db.commit()
+
+        print("USER SAVED SUCCESSFULLY")  # 👈 DEBUG
+
+        return {"message": "User created"}
+
+    except Exception as e:
+        print("REGISTER ERROR:", str(e))   # 👈 CRITICAL DEBUG
+        raise HTTPException(status_code=500, detail=str(e))
+
+    finally:
         db.close()
-        raise HTTPException(status_code=400, detail="Missing fields")
 
-    # check existing user
-    existing = db.query(User).filter(User.username == username).first()
-
-    if existing:
-        db.close()
-        raise HTTPException(status_code=400, detail="User already exists")
-
-    # create new user
-    new_user = User(username=username, password=password)
-
-    db.add(new_user)
-    db.commit()
-    print("USER INSERTED")
-    db.close()
-
-    return {"message": "User created"}
-
+        
 # ---------- LOGIN ----------
 from image.database import SessionLocal, User
 
