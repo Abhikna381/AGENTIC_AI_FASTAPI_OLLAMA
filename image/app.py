@@ -5,24 +5,21 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 from openai import OpenAI
 from dotenv import load_dotenv
-
 import base64, os
 
-from image.memory import add_memory, search_memory
 from image.auth import authenticate_user, create_access_token, decode_token
 from image.users import create_user
+from image.database import SessionLocal, ChatMemory, UserImage
 
-load_dotenv()
+# ✅ FIX: load .env correctly
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 app = FastAPI()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
-# ✅ FIX PATH
 BASE_DIR = os.path.dirname(__file__)
-
-last_image = {"b64": None}
 
 app.add_middleware(
     CORSMiddleware,
@@ -39,19 +36,24 @@ def home():
 # ---------- REGISTER ----------
 @app.post("/register")
 def register(data: dict):
+    if "username" not in data or "password" not in data:
+        raise HTTPException(status_code=400, detail="Missing fields")
+
     user = create_user(data["username"], data["password"])
     if not user:
         raise HTTPException(status_code=400, detail="User exists")
+
     return {"message": "User created"}
 
 # ---------- LOGIN ----------
 @app.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends()):
     user = authenticate_user(form_data.username, form_data.password)
+
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    token = create_access_token({"sub": user["username"]})
+    token = create_access_token({"sub": user.username})
     return {"access_token": token}
 
 # ---------- CHAT ----------
@@ -61,59 +63,101 @@ def chat(data: dict, token: str = Depends(oauth2_scheme)):
     if not username:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-    msg = data["message"]
+    if "message" not in data:
+        raise HTTPException(status_code=400, detail="Message missing")
 
-    memories = search_memory(msg)
-    context = "\n".join(memories)
+    db = SessionLocal()
 
-    content = [
-        {"type": "input_text", "text": f"""
+    try:
+        # last 5 chats
+        history = db.query(ChatMemory)\
+            .filter(ChatMemory.username == username)\
+            .order_by(ChatMemory.id.desc())\
+            .limit(5).all()
+
+        context = "\n".join([f"{h.message} -> {h.response}" for h in history])
+
+        # last image
+        last_img = db.query(UserImage)\
+            .filter(UserImage.username == username)\
+            .order_by(UserImage.id.desc()).first()
+
+        content = [
+            {"type": "input_text", "text": f"""
 User: {username}
-
-Memory:
+Chat History:
 {context}
-
-Question:
-{msg}
+Question: {data['message']}
 """}
-    ]
+        ]
 
-    if last_image["b64"]:
-        content.append({
-            "type": "input_image",
-            "image_url": f"data:image/jpeg;base64,{last_image['b64']}"
-        })
+        if last_img:
+            content.append({
+                "type": "input_image",
+                "image_url": f"data:image/jpeg;base64,{last_img.image_data}"
+            })
 
-    response = client.responses.create(
-        model="gpt-4o-mini",
-        input=[{"role": "user", "content": content}]
-    )
+        response = client.responses.create(
+            model="gpt-4o-mini",
+            input=[{"role": "user", "content": content}]
+        )
 
-    reply = response.output[0].content[0].text
+        # ✅ SAFE PARSE
+        reply = response.output_text
 
-    add_memory(msg + " -> " + reply)
+        # save chat
+        db.add(ChatMemory(
+            username=username,
+            message=data["message"],
+            response=reply
+        ))
+        db.commit()
 
-    return {"reply": reply}
+        return {"reply": reply}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    finally:
+        db.close()
 
 # ---------- IMAGE ----------
 @app.post("/upload-image")
-async def upload_image(file: UploadFile = File(...)):
-    img = await file.read()
-    b64 = base64.b64encode(img).decode()
+async def upload_image(
+    file: UploadFile = File(...),
+    token: str = Depends(oauth2_scheme)
+):
+    username = decode_token(token)
+    if not username:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
-    last_image["b64"] = b64
+    db = SessionLocal()
 
-    response = client.responses.create(
-        model="gpt-4o-mini",
-        input=[{
-            "role": "user",
-            "content": [
-                {"type": "input_text", "text": "Describe this image in detail"},
-                {"type": "input_image", "image_url": f"data:image/jpeg;base64,{b64}"}
-            ]
-        }]
-    )
+    try:
+        img = await file.read()
+        b64 = base64.b64encode(img).decode()
 
-    caption = response.output[0].content[0].text
+        # save image
+        db.add(UserImage(username=username, image_data=b64))
+        db.commit()
 
-    return {"caption": caption}
+        response = client.responses.create(
+            model="gpt-4o-mini",
+            input=[{
+                "role": "user",
+                "content": [
+                    {"type": "input_text", "text": "Describe this image in detail"},
+                    {"type": "input_image", "image_url": f"data:image/jpeg;base64,{b64}"}
+                ]
+            }]
+        )
+
+        caption = response.output_text
+
+        return {"caption": caption}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    finally:
+        db.close()

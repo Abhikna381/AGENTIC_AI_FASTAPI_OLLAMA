@@ -43,12 +43,25 @@ h1 {
     width: 100%;
     margin-top: 10px;
     display: none;
+    border-radius: 10px;
 }
 
 input, button {
     padding: 10px;
     margin: 5px;
     width: 100%;
+    border-radius: 6px;
+    border: none;
+}
+
+button {
+    background: #2563eb;
+    color: white;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #1e40af;
 }
 </style>
 </head>
@@ -69,21 +82,24 @@ input, button {
 <!-- CHAT -->
 <div class="chat" id="chat"></div>
 
-<input id="msg" placeholder="Ask something">
+<input id="msg" placeholder="Ask something (including about image)">
 <button onclick="sendMsg()">Send</button>
 
 <!-- IMAGE -->
 <input type="file" id="file">
 <img id="preview" class="preview">
+
 <button onclick="upload()">Generate Caption</button>
+<button onclick="readCaption()">🔊 Read Caption</button>
 
 </div>
 
 <script>
 
 let token = "";
+let lastCaption = "";
 
-// ✅ FIXED DOM REFERENCES
+// DOM
 const chat = document.getElementById("chat");
 const username = document.getElementById("username");
 const password = document.getElementById("password");
@@ -107,58 +123,83 @@ async function login(){
     form.append("username", username.value);
     form.append("password", password.value);
 
-    let res = await fetch("/login", {
-        method: "POST",
-        body: form
-    });
+    try {
+        let res = await fetch("/login", {
+            method: "POST",
+            body: form
+        });
 
-    let data = await res.json();
+        let data = await res.json();
 
-    if (!data.access_token) {
-        alert("Login failed");
-        return;
+        if (!data.access_token) {
+            alert("Login failed");
+            return;
+        }
+
+        token = data.access_token;
+        console.log("TOKEN:", token);
+
+        alert("✅ Login Success");
+        loginBox.style.display = "none";
+
+    } catch {
+        alert("Server error");
     }
-
-    token = data.access_token;
-
-    alert("Login Success");
-    loginBox.style.display = "none";
 }
 
 /* CHAT */
 async function sendMsg(){
+
+    if (!token){
+        alert("Please login first");
+        return;
+    }
+
     let msg = document.getElementById("msg").value;
 
     if (!msg) return;
 
     add(msg, "user");
 
-    let res = await fetch("/chat", {
-        method: "POST",
-        headers: {
-            "Content-Type":"application/json",
-            "Authorization":"Bearer " + token
-        },
-        body: JSON.stringify({message: msg})
-    });
+    try {
+        let res = await fetch("/chat", {
+            method: "POST",
+            headers: {
+                "Content-Type":"application/json",
+                "Authorization":"Bearer " + token
+            },
+            body: JSON.stringify({message: msg})
+        });
 
-    let data = await res.json();
+        let data = await res.json();
 
-    if (data.reply) {
-        add(data.reply, "bot");
-    } else {
-        add("Error: " + JSON.stringify(data), "bot");
+        if (data.reply) {
+            add(data.reply, "bot");
+        } else {
+            add("Error: " + JSON.stringify(data), "bot");
+        }
+
+    } catch {
+        add("❌ Server error", "bot");
     }
 }
 
 /* IMAGE PREVIEW */
 file.onchange = e => {
+    if (!file.files[0]) return;
+
     preview.src = URL.createObjectURL(file.files[0]);
     preview.style.display = "block";
 };
 
 /* IMAGE UPLOAD */
 async function upload(){
+
+    if (!token){
+        alert("Please login first");
+        return;
+    }
+
     if (!file.files[0]) {
         alert("Select image first");
         return;
@@ -167,18 +208,43 @@ async function upload(){
     let form = new FormData();
     form.append("file", file.files[0]);
 
-    let res = await fetch("/upload-image", {
-        method: "POST",
-        body: form
-    });
+    try {
+        let res = await fetch("/upload-image", {
+            method: "POST",
+            headers:{
+                "Authorization":"Bearer " + token   // ✅ FIXED
+            },
+            body: form
+        });
 
-    let data = await res.json();
+        let data = await res.json();
 
-    if (data.caption) {
-        add("🖼 " + data.caption, "bot");
-    } else {
-        add("Image error", "bot");
+        if (data.caption) {
+            lastCaption = data.caption;
+            add("🖼 " + lastCaption, "bot");
+        } else {
+            add("Image error: " + JSON.stringify(data), "bot");
+        }
+
+    } catch {
+        add("❌ Upload failed", "bot");
     }
+}
+
+/* 🔊 READ CAPTION */
+function readCaption(){
+
+    if (!lastCaption){
+        alert("No caption available");
+        return;
+    }
+
+    let speech = new SpeechSynthesisUtterance(lastCaption);
+    speech.lang = "en-US";
+    speech.rate = 1;
+    speech.pitch = 1;
+
+    speechSynthesis.speak(speech);
 }
 
 </script>

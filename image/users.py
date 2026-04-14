@@ -1,14 +1,22 @@
-users_db = {}
+from image.database import SessionLocal, User
 
 def create_user(username, password):
-    if username in users_db:
+    db = SessionLocal()
+
+    existing = db.query(User).filter(User.username == username).first()
+    if existing:
         return None
 
-    users_db[username] = {
-        "username": username,
-        "password": password
-    }
-    return users_db[username]
+    user = User(username=username, password=password)
+    db.add(user)
+    db.commit()
+    db.close()
+
+    return user
+
 
 def get_user(username):
-    return users_db.get(username)
+    db = SessionLocal()
+    user = db.query(User).filter(User.username == username).first()
+    db.close()
+    return user
