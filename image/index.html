@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>AI ChatGPT UI</title>
+<title>ANKITA GPT</title>
 
 <style>
 body {
@@ -95,9 +95,15 @@ let speaking = false;
 let lastCaption = "";
 
 /* AUTO LOGIN */
-if (token){
-    document.getElementById("loginBox").style.display="none";
-}
+window.onload = function(){
+    if (token){
+        document.getElementById("loginBox").style.display = "none";
+        add("✅ Logged in from saved session", "bot");
+    } else {
+        add("⚠️ Please login first", "bot");
+    }
+};
+
 
 /* ADD MESSAGE */
 function add(text,type){
@@ -129,6 +135,7 @@ async function login(){
     let params = new URLSearchParams();
     params.append("username", username.value);
     params.append("password", password.value);
+    params.append("grant_type", "password"); // 🔥 IMPORTANT
 
     let res = await fetch("/login",{
         method:"POST",
@@ -149,11 +156,12 @@ async function login(){
     token = data.access_token;
     localStorage.setItem("token", token);
 
-    alert("✅ Login success");
-    location.reload();
+
+    add("✅ Login successful", "bot");
+    document.getElementById("loginBox").style.display = "none";
 }
 
-/* ✅ ADD HERE */
+/* ✅ REGISTER */
 async function register(){
 
     let username = document.getElementById("username").value;
@@ -179,9 +187,9 @@ async function register(){
     console.log("REGISTER:", data);
 
     if (data.message){
-        alert("✅ User registered! Now login");
+        add("✅ Registered successfully. Now login.", "bot");
     } else {
-        alert("❌ Error: " + JSON.stringify(data));
+        add("❌ Register error: " + JSON.stringify(data), "bot");
     }
 }
 
@@ -211,6 +219,13 @@ async function sendMsg(){
 
     let data = await res.json();
     console.log("CHAT:", data);
+
+    console.log("TOKEN USED:", token);
+
+    if (data.detail){
+        streamText(botDiv, "❌ " + data.detail);
+        return;
+    }
 
     let reply = data.reply || JSON.stringify(data);
 
