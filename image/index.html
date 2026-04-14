@@ -89,8 +89,12 @@ button:hover {
 <input type="file" id="file">
 <img id="preview" class="preview">
 
-<button onclick="upload()">Generate Caption</button>
-<button onclick="readCaption()">🔊 Read Caption</button>
+<button onclick="upload()">🖼 Generate Caption</button>
+
+<!-- ✅ IMPROVED READ BUTTON -->
+<button onclick="readCaption()" style="background:#16a34a;">
+    🔊 Read Caption (Speak)
+</button>
 
 </div>
 
@@ -137,12 +141,13 @@ async function login(){
         }
 
         token = data.access_token;
-        console.log("TOKEN:", token);
+        console.log("✅ TOKEN:", token);
 
-        alert("✅ Login Success");
+        alert("Login Success");
         loginBox.style.display = "none";
 
-    } catch {
+    } catch (err) {
+        console.error(err);
         alert("Server error");
     }
 }
@@ -173,13 +178,16 @@ async function sendMsg(){
 
         let data = await res.json();
 
+        console.log("CHAT RESPONSE:", data); // ✅ DEBUG
+
         if (data.reply) {
             add(data.reply, "bot");
         } else {
             add("Error: " + JSON.stringify(data), "bot");
         }
 
-    } catch {
+    } catch (err) {
+        console.error(err);
         add("❌ Server error", "bot");
     }
 }
@@ -212,12 +220,14 @@ async function upload(){
         let res = await fetch("/upload-image", {
             method: "POST",
             headers:{
-                "Authorization":"Bearer " + token   // ✅ FIXED
+                "Authorization":"Bearer " + token
             },
             body: form
         });
 
         let data = await res.json();
+
+        console.log("IMAGE RESPONSE:", data); // ✅ DEBUG
 
         if (data.caption) {
             lastCaption = data.caption;
@@ -226,7 +236,8 @@ async function upload(){
             add("Image error: " + JSON.stringify(data), "bot");
         }
 
-    } catch {
+    } catch (err) {
+        console.error(err);
         add("❌ Upload failed", "bot");
     }
 }
@@ -234,15 +245,25 @@ async function upload(){
 /* 🔊 READ CAPTION */
 function readCaption(){
 
+    console.log("Read button clicked"); // ✅ DEBUG
+
     if (!lastCaption){
         alert("No caption available");
         return;
     }
 
+    console.log("Speaking:", lastCaption); // ✅ DEBUG
+
     let speech = new SpeechSynthesisUtterance(lastCaption);
+
     speech.lang = "en-US";
     speech.rate = 1;
     speech.pitch = 1;
+    speech.volume = 1;
+
+    // check voices
+    let voices = speechSynthesis.getVoices();
+    console.log("Voices:", voices);
 
     speechSynthesis.speak(speech);
 }
