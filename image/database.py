@@ -41,4 +41,8 @@ class UserImage(Base):
     username = Column(String(50))
     image_data = Column(Text)  # base64
 
-Base.metadata.create_all(bind=engine)
+try:
+    Base.metadata.create_all(bind=engine)
+    print("✅ Tables created")
+except Exception as e:
+    print("❌ DB Connection Failed:", e)
