@@ -1,67 +1,54 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>ANKITA'S AKSHAT AI IMAGE CAPTION CHATBOT</title>
+<title>AI ChatGPT UI</title>
 
 <style>
 body {
-    margin: 0;
+    margin:0;
     font-family: Arial;
-    background: #0b1220;
-    color: white;
-    display: flex;
-    justify-content: center;
+    background:#0b1220;
+    color:white;
+    display:flex;
+    justify-content:center;
 }
 
-.container {
-    width: 700px;
-    margin-top: 20px;
-}
-
-h1 {
-    text-align: center;
-}
+.container { width:700px; }
 
 .chat {
-    height: 350px;
-    overflow-y: auto;
-    background: #111827;
-    padding: 10px;
-    border-radius: 10px;
+    height:420px;
+    overflow-y:auto;
+    background:#111827;
+    padding:10px;
+    border-radius:10px;
 }
 
 .msg {
-    padding: 8px;
-    margin: 5px;
-    border-radius: 8px;
+    padding:10px;
+    margin:5px;
+    border-radius:10px;
+    max-width:80%;
+    white-space: pre-wrap;
 }
 
-.user { background: #374151; text-align: right; }
-.bot { background: #1d4ed8; }
+.user { background:#374151; margin-left:auto; }
+.bot { background:#1d4ed8; }
 
-.preview {
-    width: 100%;
-    margin-top: 10px;
-    display: none;
-    border-radius: 10px;
-}
-
-input, button {
-    padding: 10px;
-    margin: 5px;
-    width: 100%;
-    border-radius: 6px;
-    border: none;
+.controls {
+    display:flex;
+    gap:5px;
 }
 
 button {
-    background: #2563eb;
-    color: white;
-    cursor: pointer;
+    padding:10px;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
 }
 
-button:hover {
-    background: #1e40af;
+input {
+    width:100%;
+    padding:10px;
 }
 </style>
 </head>
@@ -70,202 +57,214 @@ button:hover {
 
 <div class="container">
 
-<h1>🤖 ANKITA'S AKSHAT AI</h1>
+<h2>🤖 ChatGPT AI</h2>
 
-<!-- LOGIN -->
 <div id="loginBox">
     <input id="username" placeholder="Username">
     <input id="password" type="password" placeholder="Password">
     <button onclick="login()">Login</button>
 </div>
 
-<!-- CHAT -->
-<div class="chat" id="chat"></div>
+<div id="chat" class="chat"></div>
 
-<input id="msg" placeholder="Ask something (including about image)">
-<button onclick="sendMsg()">Send</button>
+<input id="msg" placeholder="Ask about image or anything">
 
-<!-- IMAGE -->
+<div class="controls">
+    <button onclick="sendMsg()">Send</button>
+    <button onclick="startVoice()">🎤 Speak</button>
+    <button onclick="stopAll()">⏹ Stop</button>
+</div>
+
 <input type="file" id="file">
-<img id="preview" class="preview">
-
-<button onclick="upload()">🖼 Generate Caption</button>
-
-<!-- ✅ IMPROVED READ BUTTON -->
-<button onclick="readCaption()" style="background:#16a34a;">
-    🔊 Read Caption (Speak)
-</button>
+<button onclick="generateCaption()">🖼 Generate Caption</button>
+<button onclick="readCaption()">🔊 Read Caption</button>
 
 </div>
 
 <script>
 
-let token = "";
+let token = localStorage.getItem("token") || "";
+let recognition;
+let speaking = false;
 let lastCaption = "";
 
-// DOM
-const chat = document.getElementById("chat");
-const username = document.getElementById("username");
-const password = document.getElementById("password");
-const file = document.getElementById("file");
-const preview = document.getElementById("preview");
-const loginBox = document.getElementById("loginBox");
+/* AUTO LOGIN */
+if (token){
+    document.getElementById("loginBox").style.display="none";
+}
 
 /* ADD MESSAGE */
-function add(text, type){
+function add(text,type){
     let div = document.createElement("div");
     div.className = "msg " + type;
     div.innerText = text;
-
     chat.appendChild(div);
     chat.scrollTop = chat.scrollHeight;
+    return div;
 }
 
-/* LOGIN */
-async function login(){
-    let form = new FormData();
-    form.append("username", username.value);
-    form.append("password", password.value);
+/* STREAM EFFECT */
+function streamText(element, text){
+    element.innerText = "";
+    let i = 0;
 
-    try {
-        let res = await fetch("/login", {
-            method: "POST",
-            body: form
-        });
-
-        let data = await res.json();
-
-        if (!data.access_token) {
-            alert("Login failed");
-            return;
+    let interval = setInterval(()=>{
+        element.innerText += text[i];
+        i++;
+        if(i >= text.length){
+            clearInterval(interval);
         }
+    }, 15);
+}
 
-        token = data.access_token;
-        console.log("✅ TOKEN:", token);
+/* LOGIN (FIXED) */
+async function login(){
 
-        alert("Login Success");
-        loginBox.style.display = "none";
+    let params = new URLSearchParams();
+    params.append("username", username.value);
+    params.append("password", password.value);
 
-    } catch (err) {
-        console.error(err);
-        alert("Server error");
+    let res = await fetch("/login",{
+        method:"POST",
+        headers:{
+            "Content-Type":"application/x-www-form-urlencoded"
+        },
+        body: params
+    });
+
+    let data = await res.json();
+    console.log("LOGIN:", data);
+
+    if (!data.access_token){
+        alert("❌ Login failed: " + JSON.stringify(data));
+        return;
     }
+
+    token = data.access_token;
+    localStorage.setItem("token", token);
+
+    alert("✅ Login success");
+    location.reload();
 }
 
 /* CHAT */
 async function sendMsg(){
 
     if (!token){
-        alert("Please login first");
+        alert("Login first");
         return;
     }
 
     let msg = document.getElementById("msg").value;
-
     if (!msg) return;
 
-    add(msg, "user");
+    add(msg,"user");
 
-    try {
-        let res = await fetch("/chat", {
-            method: "POST",
-            headers: {
-                "Content-Type":"application/json",
-                "Authorization":"Bearer " + token
-            },
-            body: JSON.stringify({message: msg})
-        });
+    let botDiv = add("...", "bot");
 
-        let data = await res.json();
+    let res = await fetch("/chat",{
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json",
+            "Authorization":"Bearer " + token
+        },
+        body: JSON.stringify({message: msg})
+    });
 
-        console.log("CHAT RESPONSE:", data); // ✅ DEBUG
+    let data = await res.json();
+    console.log("CHAT:", data);
 
-        if (data.reply) {
-            add(data.reply, "bot");
-        } else {
-            add("Error: " + JSON.stringify(data), "bot");
-        }
+    let reply = data.reply || JSON.stringify(data);
 
-    } catch (err) {
-        console.error(err);
-        add("❌ Server error", "bot");
-    }
+    streamText(botDiv, reply);
+
+    speak(reply);
 }
 
-/* IMAGE PREVIEW */
-file.onchange = e => {
-    if (!file.files[0]) return;
-
-    preview.src = URL.createObjectURL(file.files[0]);
-    preview.style.display = "block";
-};
-
-/* IMAGE UPLOAD */
-async function upload(){
+/* IMAGE + CAPTION */
+async function generateCaption(){
 
     if (!token){
-        alert("Please login first");
+        alert("Login first");
         return;
     }
 
-    if (!file.files[0]) {
-        alert("Select image first");
+    let file = document.getElementById("file").files[0];
+    if (!file){
+        alert("Select image");
         return;
     }
 
     let form = new FormData();
-    form.append("file", file.files[0]);
+    form.append("file", file);
 
-    try {
-        let res = await fetch("/upload-image", {
-            method: "POST",
-            headers:{
-                "Authorization":"Bearer " + token
-            },
-            body: form
-        });
+    let res = await fetch("/upload-image",{
+        method:"POST",
+        headers:{
+            "Authorization":"Bearer "+token
+        },
+        body: form
+    });
 
-        let data = await res.json();
+    let data = await res.json();
+    console.log("IMAGE:", data);
 
-        console.log("IMAGE RESPONSE:", data); // ✅ DEBUG
+    lastCaption = data.caption;
+    add("🖼 " + lastCaption,"bot");
 
-        if (data.caption) {
-            lastCaption = data.caption;
-            add("🖼 " + lastCaption, "bot");
-        } else {
-            add("Image error: " + JSON.stringify(data), "bot");
-        }
+    speak(lastCaption);
+}
 
-    } catch (err) {
-        console.error(err);
-        add("❌ Upload failed", "bot");
-    }
+/* 🔊 SPEAK */
+function speak(text){
+
+    speechSynthesis.cancel(); // stop previous
+    let speech = new SpeechSynthesisUtterance(text);
+
+    speaking = true;
+
+    speech.onend = () => speaking = false;
+
+    speechSynthesis.speak(speech);
 }
 
 /* 🔊 READ CAPTION */
 function readCaption(){
-
-    console.log("Read button clicked"); // ✅ DEBUG
-
     if (!lastCaption){
         alert("No caption available");
         return;
     }
+    speak(lastCaption);
+}
 
-    console.log("Speaking:", lastCaption); // ✅ DEBUG
+/* 🎤 VOICE INPUT */
+function startVoice(){
 
-    let speech = new SpeechSynthesisUtterance(lastCaption);
+    recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = "en-US";
 
-    speech.lang = "en-US";
-    speech.rate = 1;
-    speech.pitch = 1;
-    speech.volume = 1;
+    recognition.onresult = function(e){
+        let text = e.results[0][0].transcript;
+        document.getElementById("msg").value = text;
+        sendMsg();
+    };
 
-    // check voices
-    let voices = speechSynthesis.getVoices();
-    console.log("Voices:", voices);
+    recognition.start();
+}
 
-    speechSynthesis.speak(speech);
+/* ⏹ STOP EVERYTHING */
+function stopAll(){
+
+    // stop voice input
+    if (recognition){
+        recognition.stop();
+    }
+
+    // stop speaking
+    if (speaking){
+        speechSynthesis.cancel();
+        speaking = false;
+    }
 }
 
 </script>
