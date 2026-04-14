@@ -1,5 +1,3 @@
-# image/users.py
-
 users_db = {}
 
 def create_user(username, password):
@@ -11,7 +9,6 @@ def create_user(username, password):
         "password": password
     }
     return users_db[username]
-
 
 def get_user(username):
     return users_db.get(username)

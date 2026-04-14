@@ -1,16 +1,12 @@
-# image/memory.py
-
 import faiss
 import numpy as np
 from openai import OpenAI
-import os
 
 client = OpenAI()
 
 DIM = 1536
 index = faiss.IndexFlatL2(DIM)
 memory_store = []
-
 
 def embed(text):
     res = client.embeddings.create(
@@ -19,12 +15,10 @@ def embed(text):
     )
     return np.array(res.data[0].embedding, dtype="float32")
 
-
 def add_memory(text):
     vec = embed(text)
     index.add(np.array([vec]))
     memory_store.append(text)
-
 
 def search_memory(query, k=3):
     if len(memory_store) == 0:
