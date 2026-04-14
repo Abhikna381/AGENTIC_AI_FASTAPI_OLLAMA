@@ -34,28 +34,55 @@ def home():
     return FileResponse(os.path.join(BASE_DIR, "index.html"))
 
 # ---------- REGISTER ----------
+from image.database import SessionLocal, User
+
 @app.post("/register")
 def register(data: dict):
-    if "username" not in data or "password" not in data:
+
+    db = SessionLocal()
+
+    username = data.get("username")
+    password = data.get("password")
+
+    if not username or not password:
+        db.close()
         raise HTTPException(status_code=400, detail="Missing fields")
 
-    user = create_user(data["username"], data["password"])
-    if not user:
-        raise HTTPException(status_code=400, detail="User exists")
+    # check existing user
+    existing = db.query(User).filter(User.username == username).first()
+
+    if existing:
+        db.close()
+        raise HTTPException(status_code=400, detail="User already exists")
+
+    # create new user
+    new_user = User(username=username, password=password)
+
+    db.add(new_user)
+    db.commit()
+    db.close()
 
     return {"message": "User created"}
 
 # ---------- LOGIN ----------
+from image.database import SessionLocal, User
+
 @app.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends()):
 
-    user = authenticate_user(form_data.username, form_data.password)
+    db = SessionLocal()
 
-    if not user:
+    user = db.query(User).filter(
+        User.username == form_data.username
+    ).first()
+
+    if not user or user.password != form_data.password:
+        db.close()
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    # ✅ FIX HERE
-    token = create_access_token({"sub": user["username"]})
+    token = create_access_token({"sub": user.username})
+
+    db.close()
 
     return {"access_token": token}
 
