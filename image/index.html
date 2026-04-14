@@ -172,24 +172,31 @@ async function register(){
         return;
     }
 
-    let res = await fetch("/register", {
-        method: "POST",
-        headers:{
-            "Content-Type":"application/json"
-        },
-        body: JSON.stringify({
-            username: username,
-            password: password
-        })
-    });
+    try {
+        let res = await fetch("/register", {
+            method: "POST",
+            headers:{
+                "Content-Type":"application/json"
+            },
+            body: JSON.stringify({
+                username: username,
+                password: password
+            })
+        });
 
-    let data = await res.json();
-    console.log("REGISTER:", data);
+        let data = await res.json();
 
-    if (data.message){
-        add("✅ Registered successfully. Now login.", "bot");
-    } else {
-        add("❌ Register error: " + JSON.stringify(data), "bot");
+        console.log("REGISTER:", data);
+
+        if (res.ok){
+            add("✅ Registered successfully. Now login.", "bot");
+        } else {
+            add("❌ Register failed: " + JSON.stringify(data), "bot");
+        }
+
+    } catch (err){
+        console.log(err);
+        add("❌ Server error during register", "bot");
     }
 }
 

@@ -39,10 +39,15 @@ from image.database import SessionLocal, User
 @app.post("/register")
 def register(data: dict):
 
+    print("REGISTER API HIT:", data)   # 👈 ADD THIS
+
     db = SessionLocal()
 
     username = data.get("username")
     password = data.get("password")
+
+    print("USERNAME:", username)       # 👈 ADD
+    print("PASSWORD:", password)       # 👈 ADD
 
     if not username or not password:
         db.close()
@@ -60,6 +65,7 @@ def register(data: dict):
 
     db.add(new_user)
     db.commit()
+    print("USER INSERTED")
     db.close()
 
     return {"message": "User created"}
