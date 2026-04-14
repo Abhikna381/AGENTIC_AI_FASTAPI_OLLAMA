@@ -40,3 +40,5 @@ class UserImage(Base):
     id = Column(Integer, primary_key=True)
     username = Column(String(50))
     image_data = Column(Text)  # base64
+
+Base.metadata.create_all(bind=engine)
