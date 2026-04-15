@@ -9,12 +9,12 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 
 print("DEBUG DB URL:", DATABASE_URL)  # 👈 add this
 
-engine = create_engine(
-    DATABASE_URL,
-    pool_pre_ping=True
-)
-SessionLocal = sessionmaker(bind=engine)
+if not DATABASE_URL:
+    raise Exception("❌ MYSQL_URL is not set in environment variables")
 
+engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+
+SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 
 # ---------- USER ----------

@@ -43,6 +43,7 @@ class RegisterRequest(BaseModel):
 
 @app.post("/register")
 def register(data: RegisterRequest):
+    from image.database import SessionLocal, User
 
     print("REGISTER HIT:", data)
 
