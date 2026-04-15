@@ -9,3 +9,4 @@ PyJWT
 SQLAlchemy
 #PyMySQL
 psycopg2-binary
+pypdf
