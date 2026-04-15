@@ -80,7 +80,8 @@ input {
     <button onclick="startVoice()">🎤 Speak</button>
     <button onclick="stopAll()">⏹ Stop</button>
 </div>
-
+<input type="file" id="pdfFile" accept="application/pdf">
+<button onclick="uploadPDF()">📄 Upload PDF</button>
 <input type="file" id="file">
 <button onclick="generateCaption()">🖼 Generate Caption</button>
 <button onclick="readCaption()">🔊 Read Caption</button>
@@ -325,6 +326,42 @@ function stopAll(){
         speechSynthesis.cancel();
         speaking = false;
     }
+}
+
+async function uploadPDF(){
+
+    if (!token){
+        alert("Login first");
+        return;
+    }
+
+    let file = document.getElementById("pdfFile").files[0];
+
+    if (!file){
+        alert("Select PDF");
+        return;
+    }
+
+    let form = new FormData();
+    form.append("file", file);
+
+    let res = await fetch("/upload-pdf", {
+        method: "POST",
+        headers: {
+            "Authorization": "Bearer " + token
+        },
+        body: form
+    });
+
+    let data = await res.json();
+
+    if (res.ok){
+        add("📄 PDF uploaded successfully", "bot");
+    } else {
+        add("❌ PDF upload failed", "bot");
+    }
+
+    console.log(data);
 }
 
 </script>

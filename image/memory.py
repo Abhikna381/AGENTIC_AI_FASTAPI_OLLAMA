@@ -2,12 +2,20 @@ import faiss
 import numpy as np
 from openai import OpenAI
 
+from image.pdf_utils import chunk_text
+
 client = OpenAI()
 
 DIM = 1536
-index = faiss.IndexFlatL2(DIM)
-memory_store = []
 
+# ---------- PDF MEMORY ----------
+pdf_index = faiss.IndexFlatL2(DIM)
+pdf_store = []
+
+# ---------- IMAGE MEMORY (optional future use) ----------
+image_store = []
+
+# ---------- EMBEDDING ----------
 def embed(text):
     res = client.embeddings.create(
         model="text-embedding-3-small",
@@ -15,16 +23,21 @@ def embed(text):
     )
     return np.array(res.data[0].embedding, dtype="float32")
 
-def add_memory(text):
-    vec = embed(text)
-    index.add(np.array([vec]))
-    memory_store.append(text)
+# ---------- PDF ADD ----------
+def add_pdf_to_memory(text):
+    chunks = chunk_text(text)
 
-def search_memory(query, k=3):
-    if len(memory_store) == 0:
+    for chunk in chunks:
+        vec = embed(chunk)
+        pdf_index.add(np.array([vec]))
+        pdf_store.append(chunk)
+
+# ---------- PDF SEARCH ----------
+def search_pdf(query, k=3):
+    if len(pdf_store) == 0:
         return []
 
     q = embed(query)
-    D, I = index.search(np.array([q]), k)
+    D, I = pdf_index.search(np.array([q]), k)
 
-    return [memory_store[i] for i in I[0] if i < len(memory_store)]
+    return [pdf_store[i] for i in I[0] if i < len(pdf_store)]

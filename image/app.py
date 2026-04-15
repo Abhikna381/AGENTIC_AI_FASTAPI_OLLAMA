@@ -11,6 +11,9 @@ from image.auth import authenticate_user, create_access_token, decode_token
 from image.users import create_user
 from image.database import SessionLocal, ChatMemory, UserImage
 
+from image.pdf_utils import extract_pdf_text
+from image.memory import add_pdf_to_memory, search_pdf
+
 # ✅ FIX: load .env correctly
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 
@@ -117,7 +120,12 @@ def chat(data: dict, token: str = Depends(oauth2_scheme)):
             .order_by(ChatMemory.id.desc())\
             .limit(5).all()
 
-        context = "\n".join([f"{h.message} -> {h.response}" for h in history])
+        pdf_context = search_pdf(data["message"])
+
+        context = "\n".join(
+            [f"{h.message} -> {h.response}" for h in history]
+            + pdf_context
+        )
 
         # last image
         last_img = db.query(UserImage)\
@@ -163,7 +171,35 @@ Question: {data['message']}
     finally:
         db.close()
 
-# ---------- IMAGE ----------
+# ---------- IMAGE and PDF ----------
+@app.post("/upload-pdf")
+async def upload_pdf(
+    file: UploadFile = File(...),
+    token: str = Depends(oauth2_scheme)
+):
+
+    username = decode_token(token)
+    if not username:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    try:
+        file_bytes = await file.read()
+
+        text = extract_pdf_text(file_bytes)
+
+        if not text.strip():
+            raise HTTPException(status_code=400, detail="Empty PDF")
+
+        add_pdf_to_memory(text)
+
+        return {
+            "message": "PDF uploaded successfully",
+            "chars": len(text)
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/upload-image")
 async def upload_image(
     file: UploadFile = File(...),
