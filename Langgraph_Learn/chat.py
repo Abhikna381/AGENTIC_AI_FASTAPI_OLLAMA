@@ -59,5 +59,6 @@ graph.add_edge("samplenode", END)
 
 graph = graph.compile()
 
-updated_state = graph.invoke({"messages": [{"role": "user", "content": "hi!"}]})
+#updated_state = graph.invoke(MessagesState({"messages": ["Hi, I am Abhijeet ..."]}))
+updated_state = graph.invoke({"messages": [{"role": "user", "content": "What is my name ?"}]})
 print("\n\nupdated_state", updated_state)
