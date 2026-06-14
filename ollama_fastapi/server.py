@@ -1,4 +1,4 @@
-from fastapi import FastAPI,Body
+from fapi import FastAPI,Body
 from ollama import Client
 
 app = FastAPI()

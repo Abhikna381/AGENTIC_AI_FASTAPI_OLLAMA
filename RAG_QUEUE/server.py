@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 
-from fastapi import FastAPI,Query
+from fapi import FastAPI,Query
 from rq.job import Job
 from .client.rq_client import queue, redis_conn
 from .queues.worker import process_query

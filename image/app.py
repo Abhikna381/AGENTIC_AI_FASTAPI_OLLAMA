@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, Depends, HTTPException
+from fapi import FastAPI, UploadFile, File, Depends, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -195,7 +195,7 @@ async def upload_pdf(
         return {
             "message": "PDF uploaded successfully",
             "chars": len(text)
-        }
+        } 
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
